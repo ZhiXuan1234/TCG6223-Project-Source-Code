@@ -131,6 +131,7 @@ class MyVirtualWorld
      mymodelloader.load("C:/Users/User/OneDrive - mmu.edu.my/Documents/school works/TCG6223_COMPUTER GRAPHICS/Lab/Lab 01/data-Lab01/model_lowpolygonstanforddragon.txt",100);
 
      //mymodelloader.load("data/model_rose.txt", 0.2);
+     // some changes
 
      mymodelloader.load("data/model_shuttle.txt", 0.1);
 
