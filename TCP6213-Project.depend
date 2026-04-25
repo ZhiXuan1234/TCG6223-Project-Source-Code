@@ -1,0 +1,112 @@
+# depslib dependency file v1.0
+1776749370 source:c:\users\user\onedrive - personal\documents\education\tcp6213-project\cglabmain.cpp
+	"CGLabxx.hpp"
+	<cstdlib>
+	<iostream>
+	<iomanip>
+	<cmath>
+	<GL/glut.h>
+	"CGLabmain.hpp"
+	"ProjectWorld.hpp"
+
+1774792310 c:\users\user\onedrive - personal\documents\education\tcp6213-project\cglabmain.hpp
+	<string>
+	<cmath>
+	<iostream>
+	<GL/glut.h>
+
+1776749180 c:\users\user\onedrive - personal\documents\education\tcp6213-project\kinger.hpp
+	"ObjModel.hpp"
+	<string>
+
+1776739993 c:\users\user\onedrive - personal\documents\education\tcp6213-project\objmodel.hpp
+	<vector>
+	<string>
+
+1776740003 source:c:\users\user\onedrive - personal\documents\education\tcp6213-project\objmodel.cpp
+	<GL/glut.h>
+	<fstream>
+	<sstream>
+	<iostream>
+	<cstdlib>
+	<vector>
+	<string>
+	"ObjModel.hpp"
+
+1776749286 c:\users\user\onedrive - personal\documents\education\tcp6213-project\projectworld.hpp
+	"CGLabmain.hpp"
+	"Kinger.hpp"
+
+1776749188 source:c:\users\user\onedrive - personal\documents\education\tcp6213-project\kinger.cpp
+	<GL/glut.h>
+	<iostream>
+	"Kinger.hpp"
+
+1776749291 source:c:\users\user\onedrive - personal\documents\education\tcp6213-project\projectworld.cpp
+	<GL/glut.h>
+	<iostream>
+	"ProjectWorld.hpp"
+
+1776859553 source:c:\users\jamie\desktop\backup_comp\degree_sem6\tcg6223-computer graphics\project\tcp6213-project (3)\tcp6213-project\cglabmain.cpp
+	"CGLabxx.hpp"
+	<cstdlib>
+	<iostream>
+	<iomanip>
+	<cmath>
+	<GL/glut.h>
+	"CGLabmain.hpp"
+	"ProjectWorld.hpp"
+
+1776859553 c:\users\jamie\desktop\backup_comp\degree_sem6\tcg6223-computer graphics\project\tcp6213-project (3)\tcp6213-project\cglabmain.hpp
+	<string>
+	<cmath>
+	<iostream>
+	<GL/glut.h>
+
+1776859553 c:\users\jamie\desktop\backup_comp\degree_sem6\tcg6223-computer graphics\project\tcp6213-project (3)\tcp6213-project\projectworld.hpp
+	"CGLabmain.hpp"
+	"Kinger.hpp"
+
+1776866169 c:\users\jamie\desktop\backup_comp\degree_sem6\tcg6223-computer graphics\project\tcp6213-project (3)\tcp6213-project\kinger.hpp
+	"ObjModel.hpp"
+	<string>
+
+1776859553 c:\users\jamie\desktop\backup_comp\degree_sem6\tcg6223-computer graphics\project\tcp6213-project (3)\tcp6213-project\objmodel.hpp
+	<vector>
+	<string>
+
+1776914665 source:c:\users\jamie\desktop\backup_comp\degree_sem6\tcg6223-computer graphics\project\tcp6213-project (3)\tcp6213-project\kinger.cpp
+	<GL/glut.h>
+	<iostream>
+	"Kinger.hpp"
+
+1776859553 source:c:\users\jamie\desktop\backup_comp\degree_sem6\tcg6223-computer graphics\project\tcp6213-project (3)\tcp6213-project\objmodel.cpp
+	<GL/glut.h>
+	<fstream>
+	<sstream>
+	<iostream>
+	<cstdlib>
+	<vector>
+	<string>
+	"ObjModel.hpp"
+
+1776865800 source:c:\users\jamie\desktop\backup_comp\degree_sem6\tcg6223-computer graphics\project\tcp6213-project (3)\tcp6213-project\projectworld.cpp
+	<GL/glut.h>
+	<iostream>
+	"ProjectWorld.hpp"
+
+1777006124 source:c:\users\jamie\desktop\backup_comp\degree_sem6\tcg6223-computer graphics\project\tcp6213-project (3)\tcp6213-project\cnaworld.cpp
+	<GL/glut.h>
+	<iostream>
+	"CNAWorld.hpp"
+
+1777006121 c:\users\jamie\desktop\backup_comp\degree_sem6\tcg6223-computer graphics\project\tcp6213-project (3)\tcp6213-project\cnaworld.hpp
+	"CNAmain.hpp"
+	"Kinger.hpp"
+
+1777006579 c:\users\jamie\desktop\backup_comp\degree_sem6\tcg6223-computer graphics\project\tcp6213-project (3)\tcp6213-project\cnamain.hpp
+	<string>
+	<cmath>
+	<iostream>
+	<GL/glut.h>
+
