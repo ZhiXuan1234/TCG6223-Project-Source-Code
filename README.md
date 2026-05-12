@@ -6,10 +6,10 @@ Made by ... ,Jaixen, ...
 
 - [Main fucntion]
 - [3D Virtual World projection]
-- [Model Loader]
-- [Texture Loader]
-- [Character Models] - Kinger (Done & Loaded) & Caine (Done but not Loaded)
-- [Character Texture] - Kinger (Undone) & Caine (Currently Unavailable)
+- [Model Loader]  -Jamie & Assited by Lau Zhi Xuan
+- [Texture Loader] -Jamie
+- [Character Models] - Kinger (Done & Loaded) & Caine (Done but not Loaded) -Jamie
+- [Character Texture] - Kinger (Undone) & Caine (Currently Unavailable) -Jamie
 - [stb_image.h] #dont remove this file
 
 ## READ THIS
