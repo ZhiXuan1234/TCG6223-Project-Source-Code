@@ -22,6 +22,9 @@ using namespace ProjectWorld;
 
 void MyVirtualWorld::init()
 {
+    //#//#//#//#//#//#//#//#//#//#//#//#Model#//#//#//#//#//#//#//#//#//#//#//
+
+    //////////////////////////////////Kinger//////////////////////////////////
     const std::string headPath =
         "Model\\Kinger\\kinger_Head.txt";
 
@@ -52,7 +55,23 @@ void MyVirtualWorld::init()
     const std::string bucketHandlePath =
         "Model\\Kinger\\kinger_BucketHandle.txt";
 
+    //////////////////////////////////Gloinks//////////////////////////////////
 
+    const std::string gloinksBowlingPinPath =
+        "Model\\Gloinks\\gloinks_BowlingPin.txt";
+
+    const std::string gloinksBowlingPinPath =
+        "Model\\Gloinks\\gloinks_BowlingPin.txt";
+
+
+    //////////////////////////////////Caine//////////////////////////////////
+    const std::string headPath =
+        "Model\\Kinger\\kinger_Head.txt";
+
+
+    //#//#//#//#//#//#//#//#//#//#Condition Checking#//#//#//#//#//#//#//#//#//
+
+    //////////////////////////////////Kinger//////////////////////////////////
     if (!kinger.loadHead(headPath))
     {
         std::cerr << "Kinger head failed to load.\n";
@@ -103,7 +122,9 @@ void MyVirtualWorld::init()
         std::cerr << "Kinger cloth failed to load.\n";
     }
 
-    //Texture
+    //#//#//#//#//#//#//#//#//#//#//#Texture#//#//#//#//#//#//#//#//#//#//#//#
+
+    //////////////////////////////////Kinger//////////////////////////////////
     kinger.headTextureID = TextureLoader::loadTexture(
     "Model/Kinger/WoodTexture.jpg"
     );
