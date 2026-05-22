@@ -89,6 +89,26 @@ void MyVirtualWorld::init()
     const std::string groundPath =
         "Model\\Environment\\Ground.txt";
 
+    const std::string castleWallPath =
+        "Model\\Environment\\CastleWall.txt";
+
+    const std::string cubePath =
+        "Model\\Environment\\Cube.txt";
+
+    const std::string cubeGroupedPath =
+        "Model\\Environment\\CubeGrouped.txt";
+
+    const std::string irregularCubePath =
+        "Model\\Environment\\IrregularCube.txt";
+
+    const std::string pillarPath =
+        "Model\\Environment\\Pillar.txt";
+
+    const std::string roofPath =
+        "Model\\Environment\\Roof.txt";
+
+    const std::string spherePath =
+        "Model\\Environment\\Sphere.txt";
 
     //#//#//#//#//#//#//#//#//#//#Condition Checking#//#//#//#//#//#//#//#//#//
 
@@ -183,6 +203,41 @@ void MyVirtualWorld::init()
     if (!environment.loadGround(groundPath))
     {
         std::cerr << "Ground failed to load.\n";
+    }
+
+    if (!environment.loadCastleWall(castleWallPath))
+    {
+        std::cerr << "CastleWall failed to load.\n";
+    }
+
+    if (!environment.loadCube(cubePath))
+    {
+        std::cerr << "Cube failed to load.\n";
+    }
+
+    if (!environment.loadCubeGrouped(cubeGroupedPath))
+    {
+        std::cerr << "CubeGrouped failed to load.\n";
+    }
+
+    if (!environment.loadIrregularCube(irregularCubePath))
+    {
+        std::cerr << "IrregularCube failed to load.\n";
+    }
+
+    if (!environment.loadPillar(pillarPath))
+    {
+        std::cerr << "Pillar failed to load.\n";
+    }
+
+    if (!environment.loadRoof(roofPath))
+    {
+        std::cerr << "Roof failed to load.\n";
+    }
+
+    if (!environment.loadSphere(spherePath))
+    {
+        std::cerr << "Sphere failed to load.\n";
     }
 
 
