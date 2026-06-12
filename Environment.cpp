@@ -51,15 +51,15 @@ bool Environment::loadTextures()
     );
 
     cube1Texture = TextureLoader::loadTexture(
-    "Model\\Environment\\Textures\\Cube1.png"
+        "Model\\Environment\\Textures\\Cube1.png"
     );
 
     cube2Texture = TextureLoader::loadTexture(
-    "Model\\Environment\\Textures\\Cube2.png"
+        "Model\\Environment\\Textures\\Cube2.png"
     );
 
     cubeGroupedTexture = TextureLoader::loadTexture(
-    "Model\\Environment\\Textures\\CubeGrouped.png"
+        "Model\\Environment\\Textures\\CubeGrouped.png"
     );
 
     circusObject1Texture = TextureLoader::loadTexture(
@@ -153,19 +153,21 @@ void Environment::drawSkyBox() const
 
     glPushMatrix();
 
-    // Keep background texture bright
-    glDisable(GL_LIGHTING);
-
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, skyBoxTexture);
 
+    // Usually better to disable lighting for background
+    glDisable(GL_LIGHTING);
     glDisable(GL_CULL_FACE);
     glEnable(GL_NORMALIZE);
 
-    // White color so texture is not tinted
-    glColor3ub(255, 255, 255);
+    // Darken the whole background texture here
+    glColor3ub(180, 180, 180);
 
-    // Size of the SkyBox
+    // Make sure texture color is multiplied by glColor
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+    // Size of SkyBox
     glScalef(15.0f, 15.0f, 15.0f);
 
     skyBoxModel.draw();
@@ -173,8 +175,6 @@ void Environment::drawSkyBox() const
     glDisable(GL_TEXTURE_2D);
     glDisable(GL_NORMALIZE);
     glEnable(GL_CULL_FACE);
-
-    // Turn lighting back on for other objects
     glEnable(GL_LIGHTING);
 
     glPopMatrix();
