@@ -153,6 +153,9 @@ void Environment::drawSkyBox() const
 
     glPushMatrix();
 
+    // Keep background texture bright
+    glDisable(GL_LIGHTING);
+
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, skyBoxTexture);
 
@@ -170,6 +173,9 @@ void Environment::drawSkyBox() const
     glDisable(GL_TEXTURE_2D);
     glDisable(GL_NORMALIZE);
     glEnable(GL_CULL_FACE);
+
+    // Turn lighting back on for other objects
+    glEnable(GL_LIGHTING);
 
     glPopMatrix();
 }
