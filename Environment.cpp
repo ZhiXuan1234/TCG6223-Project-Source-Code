@@ -1,21 +1,33 @@
 #include <windows.h>
 #include <GL/gl.h>
 #include "Environment.hpp"
+#include "TextureLoader.hpp"
 
 using namespace ProjectEnvironment;
 
 Environment::Environment()
 {
+    // Objects
     skyBoxLoaded = false;
     groundLoaded = false;
-
+    roofLoaded = false;
     castleWallLoaded = false;
     cubeLoaded = false;
     cubeGroupedLoaded = false;
     irregularCubeLoaded = false;
     pillarLoaded = false;
-    roofLoaded = false;
     sphereLoaded = false;
+
+    // Textures
+    circusObject1Texture = 0;
+    circusObject2Texture = 0;
+}
+bool Environment::loadTextures()
+{
+    circusObject1Texture = TextureLoader::loadTexture("Model\\Environment\\Textures\\CircusObject1.png");
+    circusObject2Texture = TextureLoader::loadTexture("Model\\Environment\\Textures\\CircusObject2.png");
+
+    return circusObject1Texture != 0 && circusObject2Texture != 0;
 }
 
 bool Environment::loadSkyBox(const std::string& filePath)
@@ -253,27 +265,31 @@ void Environment::drawIrregularCube() const
     if (!irregularCubeLoaded)
         return;
 
-    glDisable(GL_TEXTURE_2D);
+    glEnable(GL_TEXTURE_2D);
     glDisable(GL_CULL_FACE);
     glEnable(GL_NORMALIZE);
 
-    // Abstract prop 1 (Light Green)
+    // Use white color so the texture color appears correctly
+    glColor3ub(255, 255, 255);
+
+    // Abstract prop 1 - CircusObject1 texture
     glPushMatrix();
-    glColor3ub(120, 220, 190);
+    glBindTexture(GL_TEXTURE_2D, circusObject1Texture);
     glTranslatef(-42.0f, -18.7f, 25.0f);
     glScalef(12.0f, 12.0f, 12.0f);
     irregularCubeModel.draw();
     glPopMatrix();
 
-    // Abstract prop 2 (Light Orange)
+    // Abstract prop 2 - CircusObject2 texture
     glPushMatrix();
-    glColor3ub(255, 150, 90);
+    glBindTexture(GL_TEXTURE_2D, circusObject2Texture);
     glTranslatef(-55.0f, -18.7f, 46.0f);
     glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
     glScalef(9.0f, 9.0f, 9.0f);
     irregularCubeModel.draw();
     glPopMatrix();
 
+    glDisable(GL_TEXTURE_2D);
     glDisable(GL_NORMALIZE);
     glEnable(GL_CULL_FACE);
 }

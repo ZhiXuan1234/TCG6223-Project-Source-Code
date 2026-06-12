@@ -240,6 +240,11 @@ void MyVirtualWorld::init()
         std::cerr << "Sphere failed to load.\n";
     }
 
+    if (!environment.loadTextures())
+    {
+        std::cerr << "Environment textures failed to load.\n";
+    }
+
 
     //#//#//#//#//#//#//#//#//#//#//#Texture#//#//#//#//#//#//#//#//#//#//#//#
 

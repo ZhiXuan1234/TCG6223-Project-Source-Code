@@ -3,6 +3,7 @@
 
 #include "ObjModel.hpp"
 #include <string>
+#include <GL/glut.h>
 
 namespace ProjectEnvironment
 {
@@ -22,7 +23,6 @@ namespace ProjectEnvironment
 
         bool skyBoxLoaded;
         bool groundLoaded;
-
         bool castleWallLoaded;
         bool cubeLoaded;
         bool cubeGroupedLoaded;
@@ -31,12 +31,19 @@ namespace ProjectEnvironment
         bool roofLoaded;
         bool sphereLoaded;
 
+        // Texture IDs
+        GLuint circusObject1Texture;
+        GLuint circusObject2Texture;
+
     public:
         Environment();
 
+        // Texture Loading
+        bool loadTextures();
+
+        // Object Construction
         bool loadSkyBox(const std::string& filePath);
         bool loadGround(const std::string& filePath);
-
         bool loadCastleWall(const std::string& filePath);
         bool loadCube(const std::string& filePath);
         bool loadCubeGrouped(const std::string& filePath);
@@ -47,7 +54,6 @@ namespace ProjectEnvironment
 
         void drawSkyBox() const;
         void drawGround() const;
-
         void drawCastleWall() const;
         void drawCube() const;
         void drawCubeGrouped() const;
@@ -56,6 +62,7 @@ namespace ProjectEnvironment
         void drawRoof() const;
         void drawSphere() const;
 
+        //Main Draw Function
         void draw() const;
     };
 }
