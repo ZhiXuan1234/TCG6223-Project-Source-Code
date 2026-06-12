@@ -86,9 +86,8 @@ void Environment::drawSkyBox() const
 
     glColor3ub(180, 210, 255);
 
-    // Use your current working skybox transform here
-    // Example only:
-    glScalef(8.0f, 8.0f, 8.0f);
+    //Size of the SkyBox
+    glScalef(15.0f, 15.0f, 15.0f);
 
     skyBoxModel.draw();
 
@@ -117,7 +116,7 @@ void Environment::drawGround() const
 
     //Transformation
     glTranslatef(0.0f, -18.7f, 0.0f);
-    glScalef(8.0f, 8.0f, 8.0f);
+    glScalef(15.0f, 15.0f, 15.0f);
 
     groundModel.draw();
 
@@ -265,9 +264,9 @@ void Environment::drawRoof() const
 
     glColor3ub(120, 120, 180);
 
-    // Roof is already high in Blender, so use same environment transform first
+    //Size and Translate of the roof
     glTranslatef(0.0f, 18.7f, 0.0f);
-    glScalef(8.0f, 8.0f, 8.0f);
+    glScalef(15.0f, 15.0f, 15.0f);
 
     roofModel.draw();
 

@@ -256,7 +256,7 @@ void myDataInit()
  viewer.upY     = 1.0;
  viewer.upZ     = 0.0;
  viewer.zNear   = 0.1;
- viewer.zFar    = 500.0;
+ viewer.zFar    = 2000.0;
  viewer.fieldOfView = 60.0;
  viewer.aspectRatio = static_cast<GLdouble> (window.width) / window.height;
 
