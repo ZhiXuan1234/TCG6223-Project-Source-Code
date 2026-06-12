@@ -5,6 +5,42 @@
 
 using namespace ProjectEnvironment;
 
+// =======================Local environment object lighting====================== //
+static void enableLocalEnvironmentLight(
+    GLenum lightID,
+    GLfloat x, GLfloat y, GLfloat z,
+    GLfloat r, GLfloat g, GLfloat b,
+    GLfloat linearAttenuation,
+    GLfloat quadraticAttenuation
+)
+{
+    glEnable(lightID);
+
+    // 1.0f means point light, not directional light
+    GLfloat lightPosition[] = { x, y, z, 1.0f };
+
+    // Keep ambient very low because we only want local highlight
+    GLfloat lightAmbient[]  = { 0.00f, 0.00f, 0.00f, 1.0f };
+    GLfloat lightDiffuse[]  = { r, g, b, 1.0f };
+    GLfloat lightSpecular[] = { r * 0.45f, g * 0.45f, b * 0.45f, 1.0f };
+
+    glLightfv(lightID, GL_POSITION, lightPosition);
+    glLightfv(lightID, GL_AMBIENT,  lightAmbient);
+    glLightfv(lightID, GL_DIFFUSE,  lightDiffuse);
+    glLightfv(lightID, GL_SPECULAR, lightSpecular);
+
+    // Control how far the local light reaches
+    glLightf(lightID, GL_CONSTANT_ATTENUATION, 1.0f);
+    glLightf(lightID, GL_LINEAR_ATTENUATION, linearAttenuation);
+    glLightf(lightID, GL_QUADRATIC_ATTENUATION, quadraticAttenuation);
+}
+
+static void disableLocalEnvironmentLight(GLenum lightID)
+{
+    glDisable(lightID);
+}
+// ============================================================================ //
+
 Environment::Environment()
 {
     // Objects
@@ -473,14 +509,103 @@ void Environment::drawSphere() const
 /////////////////////////////////////Main draw function//////////////////////////
 void Environment::draw() const
 {
+    // Background first
     drawSkyBox();
+
+    // =====================================================
+    // Ground and roof: dim overhead stage light
+    // =====================================================
+    enableLocalEnvironmentLight(
+        GL_LIGHT1,
+        0.0f, 80.0f, 0.0f,        // position
+        0.35f, 0.35f, 0.45f,      // cool dim white-blue color
+        0.002f,
+        0.00001f
+    );
+
     drawGround();
     drawRoof();
 
+    disableLocalEnvironmentLight(GL_LIGHT1);
+
+
+    // =====================================================
+    // Castle walls: cold blue side light
+    // =====================================================
+    enableLocalEnvironmentLight(
+        GL_LIGHT1,
+        -120.0f, 60.0f, -80.0f,   // position near left/back wall
+        0.35f, 0.45f, 0.85f,      // blue lighting
+        0.003f,
+        0.00002f
+    );
+
     drawCastleWall();
+
+    disableLocalEnvironmentLight(GL_LIGHT1);
+
+
+    // =====================================================
+    // Cubes: red circus/battle light
+    // =====================================================
+    enableLocalEnvironmentLight(
+        GL_LIGHT1,
+        70.0f, 60.0f, -80.0f,     // position near cube area
+        0.90f, 0.20f, 0.20f,      // red light
+        0.003f,
+        0.00002f
+    );
+
     drawCube();
     drawCubeGrouped();
+
+    disableLocalEnvironmentLight(GL_LIGHT1);
+
+
+    // =====================================================
+    // Irregular circus objects: purple/magenta light
+    // =====================================================
+    enableLocalEnvironmentLight(
+        GL_LIGHT1,
+        -50.0f, 45.0f, 40.0f,     // position near irregular cubes
+        0.80f, 0.20f, 0.90f,      // purple light
+        0.004f,
+        0.00003f
+    );
+
     drawIrregularCube();
+
+    disableLocalEnvironmentLight(GL_LIGHT1);
+
+
+    // =====================================================
+    // Pillars: soft warm spotlight
+    // =====================================================
+    enableLocalEnvironmentLight(
+        GL_LIGHT1,
+        100.0f, 90.0f, -170.0f,   // position near pillars
+        0.85f, 0.75f, 0.55f,      // warm beige light
+        0.003f,
+        0.00002f
+    );
+
     drawPillar();
+
+    disableLocalEnvironmentLight(GL_LIGHT1);
+
+
+    // =====================================================
+    // Floating spheres: blue sky glow
+    // =====================================================
+    enableLocalEnvironmentLight(
+        GL_LIGHT1,
+        0.0f, 90.0f, 20.0f,       // position near middle/top
+        0.25f, 0.55f, 1.00f,      // blue light
+        0.003f,
+        0.00002f
+    );
+
     drawSphere();
+
+    disableLocalEnvironmentLight(GL_LIGHT1);
 }
