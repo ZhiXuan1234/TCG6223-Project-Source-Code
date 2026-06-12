@@ -20,38 +20,42 @@
 
 using namespace ProjectWorld;
 
-// ===================Whole environment lighting=================== //
+// =======================Whole environment lighting====================== //
 void setupEnvironmentLighting()
 {
     // Enable OpenGL lighting
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
 
-    // Smooth lighting
+    // Smooth shading
     glShadeModel(GL_SMOOTH);
 
-    // Important because many objects use glScalef()
+    // Needed because many objects use glScalef()
     glEnable(GL_NORMALIZE);
 
-    // Allow glColor3ub() to still affect object colors
+    // Allow glColor3ub() to work with lighting
     glEnable(GL_COLOR_MATERIAL);
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 
-    // Let both sides receive lighting
+    // Let both front and back faces receive lighting
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
-    // Overall brightness of the whole scene
-    GLfloat globalAmbient[] = { 0.45f, 0.45f, 0.45f, 1.0f };
+    // IMPORTANT:
+    // Make textures react to lighting.
+    // Without this, textures may look almost unchanged.
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+    // Lower ambient = stronger visible lighting difference
+    GLfloat globalAmbient[] = { 0.15f, 0.15f, 0.15f, 1.0f };
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, globalAmbient);
 
-    // Main light position
-    // x, y, z, 1.0f means positional light
-    GLfloat lightPosition[] = { 0.0f, 180.0f, 120.0f, 1.0f };
+    // Put the light at one side so objects have bright and dark sides
+    GLfloat lightPosition[] = { -180.0f, 220.0f, 120.0f, 1.0f };
 
-    // Main light colors
-    GLfloat lightAmbient[]  = { 0.25f, 0.25f, 0.25f, 1.0f };
-    GLfloat lightDiffuse[]  = { 0.85f, 0.85f, 0.85f, 1.0f };
-    GLfloat lightSpecular[] = { 0.35f, 0.35f, 0.35f, 1.0f };
+    // Warm circus-style main light
+    GLfloat lightAmbient[]  = { 0.05f, 0.05f, 0.05f, 1.0f };
+    GLfloat lightDiffuse[]  = { 1.00f, 0.90f, 0.70f, 1.0f };
+    GLfloat lightSpecular[] = { 1.00f, 0.90f, 0.70f, 1.0f };
 
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
     glLightfv(GL_LIGHT0, GL_AMBIENT,  lightAmbient);
@@ -59,10 +63,11 @@ void setupEnvironmentLighting()
     glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
 
     // Material shine
-    GLfloat materialSpecular[] = { 0.25f, 0.25f, 0.25f, 1.0f };
+    GLfloat materialSpecular[] = { 0.35f, 0.35f, 0.35f, 1.0f };
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, materialSpecular);
-    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 32.0f);
+    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 48.0f);
 }
+// ==================================================================== //
 
 void MyVirtualWorld::init()
 {
@@ -318,13 +323,15 @@ void MyVirtualWorld::init()
 
     // Example Later:
     // battleEnvironment.init();
+
+
+    /*Whole World Lightning*/
+    setupEnvironmentLighting();
+
 }
 
 void MyVirtualWorld::draw()
 {
-    /*Whole World Lightning*/
-    setupEnvironmentLighting();
-
     /*Environment*/
     environment.draw();
 
