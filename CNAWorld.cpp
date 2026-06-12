@@ -281,7 +281,7 @@ void MyVirtualWorld::draw()
 {
     environment.draw();  //Environment
 
-    //kinger.draw();
+    kinger.draw();
 
     //gloinks.draw();
 
