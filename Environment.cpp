@@ -23,8 +23,10 @@ Environment::Environment()
     groundTexture = 0;
     roofTexture = 0;
     castleWallTexture = 0;
+    cubeGroupedTexture = 0;
     circusObject1Texture = 0;
     circusObject2Texture = 0;
+    pillarTexture = 0;
     skyTexture = 0;
 
 }
@@ -46,12 +48,20 @@ bool Environment::loadTextures()
         "Model\\Environment\\Textures\\CastleWall.jpg"
     );
 
+    cubeGroupedTexture = TextureLoader::loadTexture(
+    "Model\\Environment\\Textures\\CubeGrouped.png"
+    );
+
     circusObject1Texture = TextureLoader::loadTexture(
         "Model\\Environment\\Textures\\CircusObject1.png"
     );
 
     circusObject2Texture = TextureLoader::loadTexture(
         "Model\\Environment\\Textures\\CircusObject2.png"
+    );
+
+    pillarTexture = TextureLoader::loadTexture(
+    "Model\\Environment\\Textures\\Pillar.png"
     );
 
     skyTexture = TextureLoader::loadTexture(
@@ -62,10 +72,11 @@ bool Environment::loadTextures()
            groundTexture != 0 &&
            roofTexture != 0 &&
            castleWallTexture != 0 &&
+           cubeGroupedTexture != 0 &&
            circusObject1Texture != 0 &&
            circusObject2Texture != 0 &&
-           skyTexture != 0
-           ;
+           pillarTexture != 0 &&
+           skyTexture != 0;
 }
 
 bool Environment::loadSkyBox(const std::string& filePath)
@@ -293,19 +304,24 @@ void Environment::drawCubeGrouped() const
     if (!cubeGroupedLoaded)
         return;
 
-    glDisable(GL_TEXTURE_2D);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, cubeGroupedTexture);
+
     glDisable(GL_CULL_FACE);
     glEnable(GL_NORMALIZE);
 
-    // Purple grouped block near center but slightly behind
+    // Use white so the texture color is not tinted
+    glColor3ub(255, 255, 255);
+
+    // Grouped block near center but slightly behind
     glPushMatrix();
-    glColor3ub(170, 100, 220);
     glTranslatef(220.0f, -18.7f, 150.0f);
     glRotatef(180.0f, 0.0f, 1.0f, 0.0f);
     glScalef(15.0f, 15.0f, 15.0f);
     cubeGroupedModel.draw();
     glPopMatrix();
 
+    glDisable(GL_TEXTURE_2D);
     glDisable(GL_NORMALIZE);
     glEnable(GL_CULL_FACE);
 }
@@ -349,13 +365,16 @@ void Environment::drawPillar() const
     if (!pillarLoaded)
         return;
 
-    glDisable(GL_TEXTURE_2D);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, pillarTexture);
+
     glDisable(GL_CULL_FACE);
     glEnable(GL_NORMALIZE);
 
-    glColor3ub(210, 200, 150);
+    // Use white so the texture is not tinted
+    glColor3ub(255, 255, 255);
 
-    // Front-left pillar (Edited)
+    // Front-left pillar
     glPushMatrix();
     glTranslatef(-150.0f, -18.7f, 27.0f);
     glScalef(15.0f, 15.0f, 15.0f);
@@ -369,6 +388,7 @@ void Environment::drawPillar() const
     pillarModel.draw();
     glPopMatrix();
 
+    glDisable(GL_TEXTURE_2D);
     glDisable(GL_NORMALIZE);
     glEnable(GL_CULL_FACE);
 }
