@@ -21,13 +21,25 @@ Environment::Environment()
     // Textures
     circusObject1Texture = 0;
     circusObject2Texture = 0;
+    castleWallTexture = 0;
 }
 bool Environment::loadTextures()
 {
-    circusObject1Texture = TextureLoader::loadTexture("Model\\Environment\\Textures\\CircusObject1.png");
-    circusObject2Texture = TextureLoader::loadTexture("Model\\Environment\\Textures\\CircusObject2.png");
+    circusObject1Texture = TextureLoader::loadTexture(
+        "Model\\Environment\\Textures\\CircusObject1.png"
+    );
 
-    return circusObject1Texture != 0 && circusObject2Texture != 0;
+    circusObject2Texture = TextureLoader::loadTexture(
+        "Model\\Environment\\Textures\\CircusObject2.png"
+    );
+
+    castleWallTexture = TextureLoader::loadTexture(
+        "Model\\Environment\\Textures\\CastleWall.jpg"
+    );
+
+    return circusObject1Texture != 0 &&
+           circusObject2Texture != 0 &&
+           castleWallTexture != 0;
 }
 
 bool Environment::loadSkyBox(const std::string& filePath)
@@ -168,11 +180,14 @@ void Environment::drawCastleWall() const
     if (!castleWallLoaded)
         return;
 
-    glDisable(GL_TEXTURE_2D);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, castleWallTexture);
+
     glDisable(GL_CULL_FACE);
     glEnable(GL_NORMALIZE);
 
-    glColor3ub(150, 150, 150);
+    // Use white so the texture color is not tinted
+    glColor3ub(255, 255, 255);
 
     // Back wall left
     glPushMatrix();
@@ -189,6 +204,7 @@ void Environment::drawCastleWall() const
     castleWallModel.draw();
     glPopMatrix();
 
+    glDisable(GL_TEXTURE_2D);
     glDisable(GL_NORMALIZE);
     glEnable(GL_CULL_FACE);
 }

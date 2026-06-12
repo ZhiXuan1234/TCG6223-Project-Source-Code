@@ -34,6 +34,7 @@ namespace ProjectEnvironment
         // Texture IDs
         GLuint circusObject1Texture;
         GLuint circusObject2Texture;
+        GLuint castleWallTexture;
 
     public:
         Environment();
