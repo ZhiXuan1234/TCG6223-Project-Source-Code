@@ -32,6 +32,11 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
+		<Linker>
+			<Add option="-lwinmm" />
+		</Linker>
+		<Unit filename="AudioManager.cpp" />
+		<Unit filename="AudioManager.hpp" />
 		<Unit filename="CNAWorld.cpp" />
 		<Unit filename="CNAWorld.hpp" />
 		<Unit filename="CNAmain.cpp" />

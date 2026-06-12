@@ -21,9 +21,9 @@
 #include "Kinger.hpp"
 #include "Gloinks.hpp"
 #include "Environment.hpp"
+#include "AudioManager.hpp"
 
-// Later you can add:
-// #include "Labubu.hpp"
+// Example Later you can add:
 // #include "BattleEnvironment.hpp"
 
 namespace ProjectWorld
@@ -35,10 +35,11 @@ public:
     ProjectKinger::Kinger kinger;
     ProjectGloinks::Gloinks gloinks;
     ProjectEnvironment::Environment environment;
-
-    // Later:
-    // ProjectLabubu::Labubu labubu;
+    // Example Later:
     // BattleEnvironment battleEnvironment;
+
+    /*Audios*/
+    AudioManager audioManager;
 
     void init();
     void draw();

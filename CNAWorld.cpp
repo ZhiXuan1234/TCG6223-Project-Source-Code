@@ -321,11 +321,15 @@ void MyVirtualWorld::init()
 
     // Example Later:
     // battleEnvironment.init();
+    // Continue here, please, thanks XD.
 
-
+    //==================================================================
+    // Notes: These two must put add the end of this function.
     /*Whole World Lightning*/
-    // Notes: Must put add the end of this function.
     setupEnvironmentLighting();
+
+    /*Background Music*/
+    audioManager.playBackgroundMusic("Audio\\BGM\\Theme from The Amazing Digital Circus.wav");
 }
 
 void MyVirtualWorld::draw()
