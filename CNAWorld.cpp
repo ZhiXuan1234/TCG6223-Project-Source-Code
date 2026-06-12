@@ -329,7 +329,7 @@ void MyVirtualWorld::init()
     setupEnvironmentLighting();
 
     /*Background Music*/
-    audioManager.playBackgroundMusic("Audio\\BGM\\Theme from The Amazing Digital Circus.wav");
+    audioManager.playBackgroundMusic("Audio\\BGM\\[Jigoku Shoujo OST] Ake ni Somaru - The Faustian (128k).wav");
 }
 
 void MyVirtualWorld::draw()
