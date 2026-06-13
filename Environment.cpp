@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <GL/gl.h>
+#include <cmath>
 #include "Environment.hpp"
 #include "TextureLoader.hpp"
 
@@ -41,6 +42,24 @@ static void disableLocalEnvironmentLight(GLenum lightID)
 }
 // ============================================================================ //
 
+// Glitch Animation Helper Function
+static void drawGlitchPanel(float width, float height, float uShift)
+{
+    glBegin(GL_QUADS);
+        glTexCoord2f(0.0f + uShift, 0.0f);
+        glVertex3f(-width, -height, 0.0f);
+
+        glTexCoord2f(1.0f + uShift, 0.0f);
+        glVertex3f( width, -height, 0.0f);
+
+        glTexCoord2f(1.0f + uShift, 1.0f);
+        glVertex3f( width,  height, 0.0f);
+
+        glTexCoord2f(0.0f + uShift, 1.0f);
+        glVertex3f(-width,  height, 0.0f);
+    glEnd();
+}
+
 Environment::Environment()
 {
     // Objects
@@ -54,6 +73,9 @@ Environment::Environment()
     pillarLoaded = false;
     sphereLoaded = false;
 
+    // Animation
+    animationTime = 0.0f;
+
     // Textures
     skyBoxTexture = 0;
     groundTexture = 0;
@@ -66,6 +88,9 @@ Environment::Environment()
     circusObject2Texture = 0;
     pillarTexture = 0;
     skyTexture = 0;
+
+    // Animation Textures
+    glitchTexture = 0;
 
 }
 bool Environment::loadTextures()
@@ -114,6 +139,11 @@ bool Environment::loadTextures()
         "Model\\Environment\\Textures\\Sky.jpg"
     );
 
+    // Animation Texture
+    glitchTexture = TextureLoader::loadTexture(
+        "Model\\Environment\\Textures\\GlitchEffect.png"
+    );
+
     return skyBoxTexture != 0 &&
            groundTexture != 0 &&
            roofTexture != 0 &&
@@ -124,7 +154,8 @@ bool Environment::loadTextures()
            circusObject1Texture != 0 &&
            circusObject2Texture != 0 &&
            pillarTexture != 0 &&
-           skyTexture != 0;
+           skyTexture != 0 &&
+           glitchTexture != 0;
 }
 
 bool Environment::loadSkyBox(const std::string& filePath)
@@ -179,6 +210,17 @@ bool Environment::loadSphere(const std::string& filePath)
 {
     sphereLoaded = sphereModel.loadFromObjText(filePath);
     return sphereLoaded;
+}
+
+//////////////////////////////////Animation/////////////////////////////////
+void Environment::tickTime()
+{
+    animationTime += 0.03f;
+
+    if (animationTime > 1000.0f)
+    {
+        animationTime = 0.0f;
+    }
 }
 
 ////////////////////////////////////Draw////////////////////////////////////
@@ -261,8 +303,15 @@ void Environment::drawRoof() const
     // White color so the roof texture appears correctly
     glColor3ub(255, 255, 255);
 
+    //////////////////////////////Animation////////////////////////////
+    // Slow roof rotation
+    float roofRotateAngle = animationTime * 8.0f;
+    ////////////////////////////////////////////////////////////////////
+
     // Size and translate of the roof
     glTranslatef(0.0f, 18.7f, 0.0f);
+    // Rotate around Y-axis
+    glRotatef(roofRotateAngle, 0.0f, 1.0f, 0.0f);
     glScalef(15.0f, 15.0f, 15.0f);
 
     roofModel.draw();
@@ -320,37 +369,79 @@ void Environment::drawCube() const
     // Use white so the texture color is not tinted
     glColor3ub(255, 255, 255);
 
+    //////////////////////////////Animation////////////////////////////
+    // Left-right movement
+    float moveX1 = sin(animationTime) * 20.0f;
+    // Forward-backward movement
+    float moveZ2 = cos(animationTime * 0.8f) * 25.0f;
+    // Circular movement
+    float circleX = sin(animationTime * 0.7f) * 25.0f;
+    float circleZ = cos(animationTime * 0.7f) * 25.0f;
+    // Slower left-right movement
+    float moveX4 = sin(animationTime * 0.5f) * 30.0f;
+    // Small rotation for all cubes
+    float rotateAngle = animationTime * 25.0f;
+    ////////////////////////////////////////////////////////////////////
+
+    // =====================================================
     // Cube left 1 - Cube1.png
+    // Moves left and right
+    // =====================================================
     glPushMatrix();
     glBindTexture(GL_TEXTURE_2D, cube1Texture);
-    glTranslatef(-90.0f, -18.7f, 100.0f);
+
+    glTranslatef(-90.0f + moveX1, -18.7f, 100.0f);
+    glRotatef(rotateAngle, 0.0f, 1.0f, 0.0f);
     glScalef(8.0f, 8.0f, 8.0f);
+
     cubeModel.draw();
     glPopMatrix();
+    // =====================================================
 
+    // =====================================================
     // Cube left 2 - Cube2.png
+    // Moves forward and backward
+    // =====================================================
     glPushMatrix();
     glBindTexture(GL_TEXTURE_2D, cube2Texture);
-    glTranslatef(-180.0f, -18.7f, 40.0f);
+
+    glTranslatef(-180.0f, -18.7f, 40.0f + moveZ2);
+    glRotatef(-rotateAngle * 0.8f, 0.0f, 1.0f, 0.0f);
     glScalef(15.0f, 15.0f, 15.0f);
+
     cubeModel.draw();
     glPopMatrix();
+    // =====================================================
 
+    // =====================================================
     // Cube right 1 - Cube2.png
+    // Circular movement
+    // =====================================================
     glPushMatrix();
     glBindTexture(GL_TEXTURE_2D, cube2Texture);
-    glTranslatef(90.0f, -18.7f, -130.0f);
+
+    glTranslatef(90.0f + circleX, -18.7f, -130.0f + circleZ);
+    glRotatef(rotateAngle * 1.2f, 0.0f, 1.0f, 0.0f);
     glScalef(10.0f, 10.0f, 10.0f);
+
     cubeModel.draw();
     glPopMatrix();
+    // =====================================================
 
-    // Cube right 2 - use Cube1.png again
+    // =====================================================
+    // Cube right 2 - Cube1.png again
+    // Slower left and right movement
+    // =====================================================
     glPushMatrix();
     glBindTexture(GL_TEXTURE_2D, cube1Texture);
-    glTranslatef(20.0f, -18.7f, -210.0f);
+
+    glTranslatef(20.0f + moveX4, -18.7f, -210.0f);
+    glRotatef(-rotateAngle * 0.6f, 0.0f, 1.0f, 0.0f);
     glScalef(17.0f, 17.0f, 17.0f);
+
     cubeModel.draw();
     glPopMatrix();
+    // =====================================================
 
     glDisable(GL_TEXTURE_2D);
     glDisable(GL_NORMALIZE);
@@ -399,17 +490,17 @@ void Environment::drawIrregularCube() const
     // Abstract prop 1 - CircusObject1 texture
     glPushMatrix();
     glBindTexture(GL_TEXTURE_2D, circusObject1Texture);
-    glTranslatef(-42.0f, -18.7f, 25.0f);
-    glScalef(12.0f, 12.0f, 12.0f);
+    glTranslatef(-42.0f, -18.7f, 0.0f);
+    glScalef(18.0f, 18.0f, 18.0f);
     irregularCubeModel.draw();
     glPopMatrix();
 
     // Abstract prop 2 - CircusObject2 texture
     glPushMatrix();
     glBindTexture(GL_TEXTURE_2D, circusObject2Texture);
-    glTranslatef(-55.0f, -18.7f, 46.0f);
+    glTranslatef(-55.0f, -18.7f, 22.0f);
     glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
-    glScalef(9.0f, 9.0f, 9.0f);
+    glScalef(12.0f, 12.0f, 12.0f);
     irregularCubeModel.draw();
     glPopMatrix();
 
@@ -465,37 +556,53 @@ void Environment::drawSphere() const
     // Use white so the texture color appears correctly
     glColor3ub(255, 255, 255);
 
+    //////////////////////////////Animation////////////////////////////
+    // Different floating values so spheres do not move together
+    float floatY1 = sin(animationTime) * 5.0f;
+    float floatY2 = sin(animationTime + 1.2f) * 4.0f;
+    float floatY3 = sin(animationTime + 2.4f) * 6.0f;
+    float floatY4 = sin(animationTime + 3.6f) * 5.0f;
+    float floatY5 = sin(animationTime + 4.8f) * 4.0f;
+    // Rotation value
+    float rotateAngle = animationTime * 30.0f;
+    ////////////////////////////////////////////////////////////////////
+
     // Main floating ball above center
     glPushMatrix();
-    glTranslatef(-10.0f, 50.0f, 10.0f);
+    glTranslatef(-10.0f, 50.0f + floatY1, 10.0f);
+    glRotatef(rotateAngle, 0.0f, 1.0f, 0.0f);
     glScalef(9.0f, 9.0f, 9.0f);
     sphereModel.draw();
     glPopMatrix();
 
     // Floating ball left-back
     glPushMatrix();
-    glTranslatef(-60.0f, 20.0f, -45.0f);
+    glTranslatef(-60.0f, 20.0f + floatY2, -45.0f);
+    glRotatef(rotateAngle * 0.8f, 0.0f, 1.0f, 0.0f);
     glScalef(10.0f, 10.0f, 10.0f);
     sphereModel.draw();
     glPopMatrix();
 
     // Floating ball front-left
     glPushMatrix();
-    glTranslatef(-90.0f, 30.0f, 90.0f);
+    glTranslatef(-90.0f, 30.0f + floatY3, 90.0f);
+    glRotatef(rotateAngle * 0.6f, 0.0f, 1.0f, 0.0f);
     glScalef(20.0f, 20.0f, 20.0f);
     sphereModel.draw();
     glPopMatrix();
 
     // Floating ball right-back
     glPushMatrix();
-    glTranslatef(75.0f, 35.0f, -60.0f);
+    glTranslatef(75.0f, 35.0f + floatY4, -60.0f);
+    glRotatef(rotateAngle * 1.1f, 0.0f, 1.0f, 0.0f);
     glScalef(15.0f, 15.0f, 15.0f);
     sphereModel.draw();
     glPopMatrix();
 
     // Floating ball right-front
     glPushMatrix();
-    glTranslatef(85.0f, 25.0f, 100.0f);
+    glTranslatef(85.0f, 25.0f + floatY5, 100.0f);
+    glRotatef(rotateAngle * 0.9f, 0.0f, 1.0f, 0.0f);
     glScalef(10.0f, 10.0f, 10.0f);
     sphereModel.draw();
     glPopMatrix();
@@ -505,6 +612,100 @@ void Environment::drawSphere() const
     glEnable(GL_CULL_FACE);
 }
 
+void Environment::drawDigitalEffect() const
+{
+    // Save current lighting state
+    GLboolean lightingWasOn;
+    glGetBooleanv(GL_LIGHTING, &lightingWasOn);
+
+    // Glitch effect should look like glowing screen distortion
+    glDisable(GL_LIGHTING);
+    glDisable(GL_CULL_FACE);
+
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, glitchTexture);
+
+    // Additive blend makes bright glitch parts glow
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+    // Do not let transparent glitch panels block the scene
+    glDepthMask(GL_FALSE);
+
+    // Make texture react to alpha/color
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+    // =====================================================
+    // Wider floating glitch panels across the environment
+    // =====================================================
+    for (int i = 0; i < 9; i++)
+    {
+        float x = -120.0f + (i % 3) * 120.0f;
+        float z = -120.0f + (i / 3) * 100.0f;
+
+        float y = 35.0f + (i % 3) * 12.0f
+                + sin(animationTime * 1.5f + i) * 4.0f;
+
+        float flicker = 0.12f + 0.35f * fabs(sin(animationTime * 7.0f + i));
+        float uShift = sin(animationTime * 3.0f + i) * 0.20f;
+
+        float width = 22.0f + (i % 2) * 12.0f;
+        float height = 8.0f + (i % 3) * 4.0f;
+
+        glPushMatrix();
+
+        glColor4f(1.0f, 1.0f, 1.0f, flicker);
+
+        glTranslatef(x, y, z);
+
+        // Make each panel face a slightly different direction
+        glRotatef(i * 35.0f + sin(animationTime + i) * 10.0f,
+                  0.0f, 1.0f, 0.0f);
+
+        drawGlitchPanel(width, height, uShift);
+
+        glPopMatrix();
+    }
+
+    // =====================================================
+    // More thin horizontal glitch scan lines
+    // =====================================================
+    glDisable(GL_TEXTURE_2D);
+    glLineWidth(2.0f);
+
+    for (int j = 0; j < 18; j++)
+    {
+        float x = -140.0f + (j % 6) * 55.0f;
+        float z = -150.0f + (j / 6) * 100.0f;
+        float y = 25.0f + (j % 4) * 14.0f;
+
+        float moveX = sin(animationTime * 2.0f + j) * 8.0f;
+        float blink = fabs(sin(animationTime * 9.0f + j));
+
+        // Cyan-blue digital line
+        glColor4f(0.0f, 0.9f, 1.0f, blink * 0.55f);
+
+        glBegin(GL_LINES);
+            glVertex3f(x + moveX, y, z);
+            glVertex3f(x + moveX + 35.0f, y + 2.0f, z);
+        glEnd();
+    }
+
+    glLineWidth(1.0f);
+
+    // Restore states
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
+    glDisable(GL_TEXTURE_2D);
+    glEnable(GL_CULL_FACE);
+
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+
+    if (lightingWasOn)
+        glEnable(GL_LIGHTING);
+    else
+        glDisable(GL_LIGHTING);
+}
 
 /////////////////////////////////////Main draw function//////////////////////////
 void Environment::draw() const
@@ -608,4 +809,7 @@ void Environment::draw() const
     drawSphere();
 
     disableLocalEnvironmentLight(GL_LIGHT1);
+
+    // Digital zap-zap circus effect
+    drawDigitalEffect();
 }

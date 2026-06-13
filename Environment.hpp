@@ -21,6 +21,10 @@ namespace ProjectEnvironment
         ObjModel roofModel;
         ObjModel sphereModel;
 
+        // Environment Animations
+        float animationTime;
+
+        // Environment Object Loader Checker
         bool skyBoxLoaded;
         bool groundLoaded;
         bool castleWallLoaded;
@@ -44,8 +48,14 @@ namespace ProjectEnvironment
         GLuint pillarTexture;
         GLuint skyTexture;
 
+        // Animation Texture IDs
+        GLuint glitchTexture;
+
     public:
         Environment();
+
+        // Environment Animation
+        void tickTime();
 
         // Texture Loading
         bool loadTextures();
@@ -70,6 +80,9 @@ namespace ProjectEnvironment
         void drawIrregularCube() const;
         void drawPillar() const;
         void drawSphere() const;
+
+        // Glitch Animation
+        void drawDigitalEffect() const;
 
         //Main Draw Function
         void draw() const;

@@ -344,5 +344,7 @@ void MyVirtualWorld::draw()
 
 void MyVirtualWorld::tickTime()
 {
+    environment.tickTime();
+
     // Later animation / battle logic
 }
