@@ -297,26 +297,26 @@ void MyVirtualWorld::init()
 
     //////////////////////////////////Kinger//////////////////////////////////
     kinger.headTextureID = TextureLoader::loadTexture(
-    "Model/Kinger/WoodTexture.jpg"
+    "Model/Kinger/Textures/WoodTexture.jpg"
     );
 
     kinger.headPieceTextureID = TextureLoader::loadTexture(
-    "Model/Kinger/WoodTexture.jpg"
+    "Model/Kinger/Textures/WoodTexture.jpg"
     );
     kinger.clothTextureID = TextureLoader::loadTexture(
-    "Model/Kinger/Kinger_Gown.png"
+    "Model/Kinger/Textures/Kinger_Gown.png"
     );
 
     kinger.rightHandwGunTextureID = TextureLoader::loadTexture(
-    "Model/Kinger/RightHandwGun.png"
+    "Model/Kinger/Textures/RightHandwGun.png"
     );
 
     kinger.leftEyeTextureID = TextureLoader::loadTexture(
-    "Model/Kinger/LeftEye.png"
+    "Model/Kinger/Textures/LeftEye.png"
     );
 
     kinger.rightEyeNTextureID = TextureLoader::loadTexture(
-    "Model/Kinger/RightEyeN.png"
+    "Model/Kinger/Textures/RightEyeN.png"
     );
 
     // Example Later:
