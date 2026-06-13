@@ -319,6 +319,31 @@ void MyVirtualWorld::init()
     "Model/Kinger/Textures/RightEyeN.png"
     );
 
+    //////////////////////////////////Gloinks//////////////////////////////////
+    gloinks.BowlingPinTextureID = TextureLoader::loadTexture(
+    "Model/Gloinks/Textures/Gloinks_BowlingPin.png"
+    );
+
+    gloinks.CircleTextureID = TextureLoader::loadTexture(
+    "Model/Gloinks/Textures/Gloinks_Circle.png"
+    );
+
+    gloinks.CubeTextureID = TextureLoader::loadTexture(
+    "Model/Gloinks/Textures/Gloinks_Cube.png"
+    );
+
+    gloinks.MoonTextureID = TextureLoader::loadTexture(
+    "Model/Gloinks/Textures/Gloinks_Moon.png"
+    );
+
+    gloinks.StarTextureID = TextureLoader::loadTexture(
+    "Model/Gloinks/Textures/Gloinks_Star.png"
+    );
+
+    gloinks.TriangularTextureID = TextureLoader::loadTexture(
+    "Model/Gloinks/Textures/Gloinks_Triangular.png"
+    );
+
     // Example Later:
     // battleEnvironment.init();
     // Continue here, please, thanks XD.
@@ -339,7 +364,7 @@ void MyVirtualWorld::draw()
 
     /*Characters*/
     kinger.draw();
-    //gloinks.draw();
+    gloinks.draw();
 }
 
 void MyVirtualWorld::tickTime()

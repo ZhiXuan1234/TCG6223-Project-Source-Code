@@ -57,102 +57,114 @@ void Gloinks::drawGloinksBowlingPin() const
 {
     if (!gloinksBowlingPinLoaded)
         return;
-    //glEnable(GL_TEXTURE_2D);
-    //glBindTexture(GL_TEXTURE_2D, headTextureID);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, BowlingPinTextureID);
 
     glPushMatrix();
         glDisable(GL_CULL_FACE);
             glEnable(GL_NORMALIZE);
+                glTranslatef(0.0f, -19.0f, 20.0f);
+                glScalef(4.0f, 4.0f, 4.0f);
                 gloinksBowlingPinModel.draw();
             glDisable(GL_NORMALIZE);
         glEnable(GL_CULL_FACE);
     glPopMatrix();
-    //glDisable(GL_TEXTURE_2D);          // Disable texturing for other parts
+    glDisable(GL_TEXTURE_2D);          // Disable texturing for other parts
 }
 
 void Gloinks::drawGloinksCirle() const
 {
     if (!gloinksCircleLoaded)
         return;
-    //glEnable(GL_TEXTURE_2D);
-    //glBindTexture(GL_TEXTURE_2D, headTextureID);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, CircleTextureID);
 
     glPushMatrix();
         glDisable(GL_CULL_FACE);
             glEnable(GL_NORMALIZE);
+            glTranslatef(0.0f, -19.0f, 20.0f);
+                glScalef(4.0f, 4.0f, 4.0f);
                 gloinksCircleModel.draw();
             glDisable(GL_NORMALIZE);
         glEnable(GL_CULL_FACE);
     glPopMatrix();
-    //glDisable(GL_TEXTURE_2D);          // Disable texturing for other parts
+    glDisable(GL_TEXTURE_2D);          // Disable texturing for other parts
 }
 
 void Gloinks::drawGloinksCube() const
 {
     if (!gloinksCubeLoaded)
         return;
-    //glEnable(GL_TEXTURE_2D);
-    //glBindTexture(GL_TEXTURE_2D, headTextureID);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, CubeTextureID);
 
     glPushMatrix();
         glDisable(GL_CULL_FACE);
             glEnable(GL_NORMALIZE);
+            glTranslatef(0.0f, -19.0f, 20.0f);
+                glScalef(4.0f, 4.0f, 4.0f);
                 gloinksCubeModel.draw();
             glDisable(GL_NORMALIZE);
         glEnable(GL_CULL_FACE);
     glPopMatrix();
-    //glDisable(GL_TEXTURE_2D);          // Disable texturing for other parts
+    glDisable(GL_TEXTURE_2D);          // Disable texturing for other parts
 }
 
 void Gloinks::drawGloinksMoon() const
 {
     if (!gloinksMoonLoaded)
         return;
-    //glEnable(GL_TEXTURE_2D);
-    //glBindTexture(GL_TEXTURE_2D, headTextureID);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, MoonTextureID);
 
     glPushMatrix();
         glDisable(GL_CULL_FACE);
             glEnable(GL_NORMALIZE);
+            glTranslatef(0.0f, -19.0f, 20.0f);
+                glScalef(4.0f, 4.0f, 4.0f);
                 gloinksMoonModel.draw();
             glDisable(GL_NORMALIZE);
         glEnable(GL_CULL_FACE);
     glPopMatrix();
-    //glDisable(GL_TEXTURE_2D);          // Disable texturing for other parts
+    glDisable(GL_TEXTURE_2D);          // Disable texturing for other parts
 }
 
 void Gloinks::drawGloinksStar() const
 {
     if (!gloinksStarLoaded)
         return;
-    //glEnable(GL_TEXTURE_2D);
-    //glBindTexture(GL_TEXTURE_2D, headTextureID);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, StarTextureID);
 
     glPushMatrix();
         glDisable(GL_CULL_FACE);
             glEnable(GL_NORMALIZE);
+            glTranslatef(0.0f, -19.0f, 20.0f);
+                glScalef(4.0f, 4.0f, 4.0f);
                 gloinksStarModel.draw();
             glDisable(GL_NORMALIZE);
         glEnable(GL_CULL_FACE);
     glPopMatrix();
-    //glDisable(GL_TEXTURE_2D);          // Disable texturing for other parts
+    glDisable(GL_TEXTURE_2D);          // Disable texturing for other parts
 }
 
 void Gloinks::drawGloinksTriangular() const
 {
     if (!gloinksTriangularLoaded)
         return;
-    //glEnable(GL_TEXTURE_2D);
-    //glBindTexture(GL_TEXTURE_2D, headTextureID);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, TriangularTextureID);
 
     glPushMatrix();
         glDisable(GL_CULL_FACE);
             glEnable(GL_NORMALIZE);
+            glTranslatef(0.0f, -19.0f, 20.0f);
+                glScalef(4.0f, 4.0f, 4.0f);
                 gloinksTriangularModel.draw();
             glDisable(GL_NORMALIZE);
         glEnable(GL_CULL_FACE);
     glPopMatrix();
-    //glDisable(GL_TEXTURE_2D);          // Disable texturing for other parts
+    glDisable(GL_TEXTURE_2D);          // Disable texturing for other parts
 }
 
 void Gloinks::draw() const

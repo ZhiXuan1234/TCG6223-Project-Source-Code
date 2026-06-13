@@ -31,14 +31,13 @@ private:
 
 public:
     Gloinks();
-    /*
-    GLuint headTextureID;
-    GLuint headPieceTextureID;
-    GLuint clothTextureID;
-    GLuint rightHandwGunTextureID;
-    GLuint leftEyeTextureID;
-    GLuint rightEyeNTextureID;
-    */
+
+    GLuint BowlingPinTextureID;
+    GLuint CircleTextureID;
+    GLuint CubeTextureID;
+    GLuint MoonTextureID;
+    GLuint StarTextureID;
+    GLuint TriangularTextureID;
 
     bool loadGloinksBowlingPin(const std::string& filePath);
     bool loadGloinksCircle(const std::string& filePath);
