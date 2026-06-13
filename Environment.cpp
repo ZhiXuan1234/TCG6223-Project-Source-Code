@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <GL/gl.h>
+#include <GL/glut.h>
 #include <cmath>
 #include "Environment.hpp"
 #include "TextureLoader.hpp"
@@ -213,9 +214,31 @@ bool Environment::loadSphere(const std::string& filePath)
 }
 
 //////////////////////////////////Animation/////////////////////////////////
-void Environment::tickTime()
+void Environment::tickTime() //Time-Based
 {
-    animationTime += 0.03f;
+    static int previousTime = -1;
+
+    int currentTime = glutGet(GLUT_ELAPSED_TIME);
+
+    if (previousTime < 0)
+    {
+        previousTime = currentTime;
+        return;
+    }
+
+    float deltaTime = (currentTime - previousTime) / 1000.0f;
+    previousTime = currentTime;
+
+    // Prevent a sudden big jump if the window freezes or pauses
+    if (deltaTime > 0.1f)
+    {
+        deltaTime = 0.1f;
+    }
+
+    // Adjust this value if the animation is too slow or too fast
+    const float animationSpeed = 1.0f;
+
+    animationTime += deltaTime * animationSpeed;
 
     if (animationTime > 1000.0f)
     {
