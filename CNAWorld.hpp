@@ -20,6 +20,7 @@
 #include "CNAmain.hpp"
 #include "Kinger.hpp"
 #include "Gloinks.hpp"
+#include "Caine.hpp"
 #include "Environment.hpp"
 #include "AudioManager.hpp"
 
@@ -34,6 +35,7 @@ class MyVirtualWorld
 public:
     ProjectKinger::Kinger kinger;
     ProjectGloinks::Gloinks gloinks;
+    ProjectCaine::Caine caine;
     ProjectEnvironment::Environment environment;
     // Example Later:
     // BattleEnvironment battleEnvironment;

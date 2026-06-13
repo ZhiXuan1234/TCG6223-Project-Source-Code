@@ -125,10 +125,47 @@ void MyVirtualWorld::init()
 
 
     //////////////////////////////////Caine//////////////////////////////////
-    //const std::string headPath =
-        //"Model\\Kinger\\kinger_Head.txt";
+    const std::string caineHatPath =
+        "Model\\Caine\\caine_Hat.txt";
 
+    const std::string caineLeftHandPath =
+        "Model\\Caine\\caine_LeftHand.txt";
 
+    const std::string caineLeftLegPath =
+        "Model\\Caine\\caine_LeftLeg.txt";
+
+    const std::string caineLeftPalmPath =
+        "Model\\Caine\\caine_LeftPalm.txt";
+
+    const std::string caineLowerJawPath =
+        "Model\\Caine\\caine_LowerJaw.txt";
+
+    const std::string caineRightHandPath =
+        "Model\\Caine\\caine_RightHand.txt";
+
+    const std::string caineRightLegPath =
+        "Model\\Caine\\caine_RightLeg.txt";
+
+    const std::string caineRightPalmPath =
+        "Model\\Caine\\caine_RightPalm.txt";
+
+    const std::string caineStaffPath =
+        "Model\\Caine\\caine_Staff.txt";
+
+    const std::string caineTonguePath =
+        "Model\\Caine\\caine_Tongue.txt";
+
+    const std::string caineTursoPath =
+        "Model\\Caine\\caine_Turso.txt";
+
+    const std::string caineUpperJawPath =
+        "Model\\Caine\\caine_UpperJaw.txt";
+
+    const std::string caineLeftEyePath =
+        "Model\\Caine\\caine_LeftEye.txt";
+
+    const std::string caineRightEyePath =
+        "Model\\Caine\\caine_RightEye.txt";
     ////////////////////////////////Environment//////////////////////////////
     const std::string skyBoxPath =
         "Model\\Environment\\Square SkyBox.txt";
@@ -242,7 +279,49 @@ void MyVirtualWorld::init()
     }
 
     //////////////////////////////////Caine//////////////////////////////////
+    if (!caine.loadHat(caineHatPath))
+    {
+        std::cerr << "Caine hat failed to load.\n";
+    }
 
+    if (!caine.loadLeftHand(caineLeftHandPath))
+    { std::cerr << "Caine left hand failed to load.\n"; }
+
+    if (!caine.loadLeftLeg(caineLeftLegPath))
+    { std::cerr << "Caine left leg failed to load.\n"; }
+
+    if (!caine.loadLeftPalm(caineLeftPalmPath))
+    { std::cerr << "Caine left palm failed to load.\n"; }
+
+    if (!caine.loadLowerJaw(caineLowerJawPath))
+    { std::cerr << "Caine lower jaw failed to load.\n"; }
+
+    if (!caine.loadRightHand(caineRightHandPath))
+    { std::cerr << "Caine right hand failed to load.\n"; }
+
+    if (!caine.loadRightLeg(caineRightLegPath))
+    { std::cerr << "Caine right leg failed to load.\n"; }
+
+    if (!caine.loadRightPalm(caineRightPalmPath))
+    { std::cerr << "Caine right palm failed to load.\n"; }
+
+    if (!caine.loadStaff(caineStaffPath))
+    { std::cerr << "Caine staff failed to load.\n"; }
+
+    if (!caine.loadTongue(caineTonguePath))
+    { std::cerr << "Caine tongue failed to load.\n"; }
+
+    if (!caine.loadTurso(caineTursoPath))
+    { std::cerr << "Caine turso failed to load.\n"; }
+
+    if (!caine.loadUpperJaw(caineUpperJawPath))
+    { std::cerr << "Caine upper jaw failed to load.\n"; }
+
+    if (!caine.loadLeftEye(caineLeftEyePath))
+    { std::cerr << "Caine left eye failed to load.\n"; }
+
+    if (!caine.loadRightEye(caineRightEyePath))
+    { std::cerr << "Caine right eye failed to load.\n"; }
 
     ////////////////////////////////Environment//////////////////////////////
     if (!environment.loadSkyBox(skyBoxPath))
@@ -348,8 +427,20 @@ void MyVirtualWorld::init()
     );
 
     //////////////////////////////////Caine//////////////////////////////////
-
-
+    caine.hatTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_Hat.png");
+    caine.leftHandTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_LeftHand.png");
+    caine.leftLegTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_LeftLeg.png");
+    caine.leftPalmTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_LeftPalm.png");
+    caine.lowerJawTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_LowerJaw.png");
+    caine.rightHandTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_RightHand.png");
+    caine.rightLegTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_RightLeg.png");
+    caine.rightPalmTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_RightPalm.png");
+    caine.staffTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_Staff.png");
+    caine.tongueTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_Tongue.png");
+    caine.tursoTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_Turso.png");
+    caine.upperJawTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_UpperJaw.png");
+    caine.leftEyeTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_LeftEye.png");
+    caine.rightEyeTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_RightEye.png");
     // Example Later:
     // battleEnvironment.init();
     // Continue here, please, thanks XD.
@@ -366,11 +457,12 @@ void MyVirtualWorld::init()
 void MyVirtualWorld::draw()
 {
     /*Environment*/
-    environment.draw();
+    //environment.draw();
 
     /*Characters*/
-    kinger.draw();
-    gloinks.draw();
+    //kinger.draw();
+    //gloinks.draw();
+    caine.draw();
 }
 
 void MyVirtualWorld::tickTime()
