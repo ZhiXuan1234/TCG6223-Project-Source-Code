@@ -241,6 +241,9 @@ void MyVirtualWorld::init()
         std::cerr << "Gloinks Triangular failed to load.\n";
     }
 
+    //////////////////////////////////Caine//////////////////////////////////
+
+
     ////////////////////////////////Environment//////////////////////////////
     if (!environment.loadSkyBox(skyBoxPath))
     {
@@ -343,6 +346,9 @@ void MyVirtualWorld::init()
     gloinks.TriangularTextureID = TextureLoader::loadTexture(
     "Model/Gloinks/Textures/Gloinks_Triangular.png"
     );
+
+    //////////////////////////////////Caine//////////////////////////////////
+
 
     // Example Later:
     // battleEnvironment.init();
