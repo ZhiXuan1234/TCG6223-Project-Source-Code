@@ -2,6 +2,7 @@
 #define KINGER_HPP
 
 #include "ObjModel.hpp"
+#include "KingerAnimation.hpp"
 #include <string>
 
 namespace ProjectKinger
@@ -38,6 +39,8 @@ private:
 
 public:
     Kinger();
+    KingerAnimation animation;
+    void update(float deltaTime);
     GLuint headTextureID;
     GLuint headPieceTextureID;
     GLuint clothTextureID;
@@ -67,6 +70,7 @@ public:
     void drawRightHandwGun() const;
     void drawBucket() const;
     void drawBucketHandle() const;
+    void drawBullet() const;
     void draw() const;
 
 

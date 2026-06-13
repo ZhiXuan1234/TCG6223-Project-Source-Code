@@ -44,6 +44,8 @@
 		<Unit filename="Gloinks.hpp" />
 		<Unit filename="Kinger.cpp" />
 		<Unit filename="Kinger.hpp" />
+		<Unit filename="KingerAnimation.cpp" />
+		<Unit filename="KingerAnimation.hpp" />
 		<Unit filename="ObjModel.cpp" />
 		<Unit filename="ObjModel.hpp" />
 		<Unit filename="TextureLoader.cpp" />

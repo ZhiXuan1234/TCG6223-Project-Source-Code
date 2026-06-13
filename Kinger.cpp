@@ -20,6 +20,12 @@ Kinger::Kinger()
     bucketHandleLoaded = false;
 }
 
+void Kinger::update(float deltaTime)
+{
+    animation.updateIdleState(deltaTime);
+    animation.updateSkillState(deltaTime);
+}
+
 bool Kinger::loadHead(const std::string& filePath)
 {
     headLoaded = headModel.loadFromObjText(filePath);
@@ -90,6 +96,7 @@ void Kinger::drawHead() const
     glBindTexture(GL_TEXTURE_2D, headTextureID);
 
     glPushMatrix();
+    glTranslatef(0.0f, animation.hoverOffset + animation.skillBodyYOffset, animation.skillBodyZOffset);
     glTranslatef(0.0f, 15.0f, 0.0f);
     glScalef(1.6f, 2.6f, 0.9f);
 
@@ -114,6 +121,7 @@ void Kinger::drawHeadPiece() const
     glBindTexture(GL_TEXTURE_2D, headPieceTextureID);
 
     glPushMatrix();
+    glTranslatef(0.0f, animation.hoverOffset + animation.skillBodyYOffset, animation.skillBodyZOffset);
     glTranslatef(0.0f, 14.5f, 0.0f);
     glScalef(1.2f, 2.0f, 0.7f);
     //glColor3ub(254, 226, 205);
@@ -138,6 +146,7 @@ void Kinger::drawLeftEye() const
     glBindTexture(GL_TEXTURE_2D, leftEyeTextureID);
 
     glPushMatrix();
+    glTranslatef(0.0f, animation.hoverOffset + animation.skillBodyYOffset, animation.skillBodyZOffset);
     glTranslatef(6.0f, 28.0f, 0.0f);
     glScalef(8.0f, 8.0f, 8.0f);
     glRotatef(180,1,0,0);
@@ -162,6 +171,7 @@ void Kinger::drawRightEyeN() const
     glBindTexture(GL_TEXTURE_2D, rightEyeNTextureID);
 
     glPushMatrix();
+    glTranslatef(0.0f, animation.hoverOffset + animation.skillBodyYOffset, animation.skillBodyZOffset);
     glRotatef(180,1,0,0);
     glTranslatef(-7.0f, -32.0f, 2.0f);
     glScalef(7.5f, 7.5f, 7.5f);
@@ -184,6 +194,7 @@ void Kinger::drawBody() const
         return;
 
     glPushMatrix();
+    glTranslatef(0.0f, animation.hoverOffset + animation.skillBodyYOffset, animation.skillBodyZOffset);
     //glTranslatef(0.0f, 7.90f, 0.0f);
     glScalef(3.0f, 3.0f, 3.0f);
     glColor3ub(254, 226, 205);
@@ -206,6 +217,8 @@ void Kinger::drawCloth() const
     glBindTexture(GL_TEXTURE_2D, clothTextureID);
 
     glPushMatrix();
+    glTranslatef(0.0f, animation.hoverOffset + animation.skillBodyYOffset, animation.skillBodyZOffset);
+    glRotatef(animation.clothRotation, 0.0f, 0.0f, 1.0f);
     glTranslatef(0.0f, -18.0f, 0.0f);
     glScalef(7.5f, 8.0f, 7.0f);
     //glColor3ub(128, 0, 128);
@@ -228,7 +241,10 @@ void Kinger::drawLeftHand() const
         return;
 
     glPushMatrix();
-    glRotatef(180,0,0,1);
+    glTranslatef(0.0f, animation.hoverOffset + animation.skillBodyYOffset, animation.skillBodyZOffset); //for animation y axis
+    glRotatef(-animation.armRotation, 1.0f, 0.0f, 0.0f); //for animation x axis
+    //glRotatef(180,0,0,1); //initial position rotation
+    glRotatef(150,0,0,1); //adjust position rotation
     glRotatef(180,1,0,0);
     glTranslatef(0.0f, -18.0f, 0.0f);
     glScalef(7.0f, 7.5f, 7.0f);
@@ -253,9 +269,13 @@ void Kinger::drawRightHandwGun() const
     glBindTexture(GL_TEXTURE_2D, rightHandwGunTextureID);
 
     glPushMatrix();
+    glTranslatef(0.0f, animation.hoverOffset + animation.skillBodyYOffset, animation.skillBodyZOffset);
+    glRotatef(animation.armRotation, 1.0f, 0.0f, 0.0f);
+    glRotatef(animation.skillArmRotation, 1.0f, 0.0f, 0.0f);
     glRotatef(180,1,0,0);
     glRotatef(180,0,0,1);
-    glTranslatef(0.0f, -18.0f, -5.0f);
+    //glTranslatef(0.0f, -18.0f, -5.0f);
+    glTranslatef(0.0f, -18.0f, 0.0f);
     glScalef(7.0f, 7.5f, 7.0f);
     glColor3ub(255, 255, 255);
 
@@ -275,6 +295,7 @@ void Kinger::drawBucket() const
         return;
 
     glPushMatrix();
+    glTranslatef(0.0f, animation.hoverOffset + animation.skillBodyYOffset, animation.skillBodyZOffset);
     glRotatef(-25,1,0,0);
     glTranslatef(8.3f, 4.0f, 4.0f);
 
@@ -298,6 +319,7 @@ void Kinger::drawBucketHandle() const
         return;
 
     glPushMatrix();
+    glTranslatef(0.0f, animation.hoverOffset + animation.skillBodyYOffset, animation.skillBodyZOffset);
     glTranslatef(0.0f, 5.0f, 2.0f);
     glRotatef(90, 0, 1, 0);
     glRotatef(90, 0, 0, 1);
@@ -308,6 +330,32 @@ void Kinger::drawBucketHandle() const
     glDisable(GL_CULL_FACE);
     glEnable(GL_NORMALIZE);
     bucketHandleModel.draw();
+    glDisable(GL_NORMALIZE);
+    glEnable(GL_CULL_FACE);
+
+    glPopMatrix();
+}
+
+void Kinger::drawBullet() const
+{
+    if (!animation.isBulletActive)
+        return;
+
+    glPushMatrix();
+
+    // Position bullet at the locked barrel height (bulletStartY) and
+    // the current travel depth (bulletZOffset), centred on X.
+    glTranslatef(-15.0f, animation.bulletStartY, animation.bulletZOffset+15);
+
+    // Disable texturing so the emissive color is not tinted.
+    glDisable(GL_TEXTURE_2D);
+
+    // Bright emissive yellow-orange to read clearly against the scene.
+    glColor3ub(255, 200, 0);
+
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_NORMALIZE);
+    glutSolidSphere(0.8, 10, 10);
     glDisable(GL_NORMALIZE);
     glEnable(GL_CULL_FACE);
 
@@ -327,4 +375,5 @@ void Kinger::draw() const
     drawRightHandwGun();
     drawBucket();
     drawBucketHandle();
+    drawBullet();   // Rendered last; independent from all body-part transforms
 }

@@ -274,15 +274,15 @@ void MyVirtualWorld::init()
 
 void MyVirtualWorld::draw()
 {
-    environment.draw();  //Environment
+    //environment.draw();  //Environment
 
-    //kinger.draw();
+    kinger.draw();
 
-    gloinks.draw();
+    //gloinks.draw();
 
 }
 
 void MyVirtualWorld::tickTime()
 {
-    // Later animation / battle logic
+    kinger.update(0.016f);
 }

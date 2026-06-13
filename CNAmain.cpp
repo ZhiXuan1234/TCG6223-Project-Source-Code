@@ -141,6 +141,9 @@ void myKeyboardFunc(unsigned char key, int x, int y)
     case 'w': case 'W': zinc = -setting.posInc;  break;
     case 's': case 'S': zinc =  setting.posInc;  break;
 
+    case ' ':
+        myvirtualworld.kinger.animation.castGunSkill();
+        break;
     case 27  : exit(1); break;
  }
 
