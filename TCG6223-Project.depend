@@ -347,11 +347,13 @@
 	<iostream>
 	<GL/glut.h>
 
-1781329247 c:\users\jamie\documents\github\tcg6223-project-source-code-forked\cnaworld.hpp
+1781338016 c:\users\jamie\documents\github\tcg6223-project-source-code-forked\cnaworld.hpp
 	"CNAmain.hpp"
 	"Kinger.hpp"
 	"Gloinks.hpp"
 	"Caine.hpp"
+	"Butterfly.hpp"
+	"KingerRoll.hpp"
 	"Environment.hpp"
 	"AudioManager.hpp"
 
@@ -372,7 +374,7 @@
 	<string>
 	<GL/glut.h>
 
-1781335650 source:c:\users\jamie\documents\github\tcg6223-project-source-code-forked\cnaworld.cpp
+1781338001 source:c:\users\jamie\documents\github\tcg6223-project-source-code-forked\cnaworld.cpp
 	<GL/glut.h>
 	<iostream>
 	"CNAWorld.hpp"
@@ -435,4 +437,22 @@
 	<GL/glut.h>
 	<string>
 	"ObjModel.hpp"
+
+1781337759 c:\users\jamie\documents\github\tcg6223-project-source-code-forked\butterfly.hpp
+	<GL/glut.h>
+	<string>
+	"ObjModel.hpp"
+
+1781337827 c:\users\jamie\documents\github\tcg6223-project-source-code-forked\kingerroll.hpp
+	<GL/glut.h>
+	<string>
+	"ObjModel.hpp"
+
+1781338278 source:c:\users\jamie\documents\github\tcg6223-project-source-code-forked\butterfly.cpp
+	<GL/glut.h>
+	"Butterfly.hpp"
+
+1781338598 source:c:\users\jamie\documents\github\tcg6223-project-source-code-forked\kingerroll.cpp
+	<GL/glut.h>
+	"KingerRoll.hpp"
 

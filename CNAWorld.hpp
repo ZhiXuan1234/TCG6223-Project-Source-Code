@@ -21,6 +21,8 @@
 #include "Kinger.hpp"
 #include "Gloinks.hpp"
 #include "Caine.hpp"
+#include "Butterfly.hpp"
+#include "KingerRoll.hpp"
 #include "Environment.hpp"
 #include "AudioManager.hpp"
 
@@ -36,6 +38,8 @@ public:
     ProjectKinger::Kinger kinger;
     ProjectGloinks::Gloinks gloinks;
     ProjectCaine::Caine caine;
+    ProjectButterfly::Butterfly butterfly;
+    ProjectKingerRoll::KingerRoll kingerRoll;
     ProjectEnvironment::Environment environment;
     // Example Later:
     // BattleEnvironment battleEnvironment;

@@ -166,6 +166,15 @@ void MyVirtualWorld::init()
 
     const std::string caineRightEyePath =
         "Model\\Caine\\caine_RightEye.txt";
+
+    //////////////////////////////////Butterfly//////////////////////////////////
+    const std::string butterflyLeftWingPath = "Model\\Butterfly\\butterfly_LeftWing.txt";
+    const std::string butterflyRightWingPath = "Model\\Butterfly\\butterfly_RightWing.txt";
+    const std::string butterflyTursoPath = "Model\\Butterfly\\butterfly_Turso.txt";
+
+    //////////////////////////////////Kinger Roll//////////////////////////////////
+    const std::string kingerRollPath = "Model\\Kinger_Roll\\kinger_Roll.txt";
+
     ////////////////////////////////Environment//////////////////////////////
     const std::string skyBoxPath =
         "Model\\Environment\\Square SkyBox.txt";
@@ -323,6 +332,28 @@ void MyVirtualWorld::init()
     if (!caine.loadRightEye(caineRightEyePath))
     { std::cerr << "Caine right eye failed to load.\n"; }
 
+    //////////////////////////////////Butterfly//////////////////////////////////
+    if (!butterfly.loadLeftWing(butterflyLeftWingPath))
+    {
+        std::cerr << "Butterfly left wing failed to load.\n";
+    }
+
+    if (!butterfly.loadRightWing(butterflyRightWingPath))
+    {
+        std::cerr << "Butterfly right wing failed to load.\n";
+    }
+
+    if (!butterfly.loadTurso(butterflyTursoPath))
+    {
+        std::cerr << "Butterfly turso failed to load.\n";
+    }
+
+    //////////////////////////////////Kinger Roll//////////////////////////////////
+    if (!kingerRoll.loadRoll(kingerRollPath))
+    {
+        std::cerr << "Kinger Roll failed to load.\n";
+    }
+
     ////////////////////////////////Environment//////////////////////////////
     if (!environment.loadSkyBox(skyBoxPath))
     {
@@ -441,6 +472,24 @@ void MyVirtualWorld::init()
     caine.upperJawTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_UpperJaw.png");
     caine.leftEyeTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_LeftEye.png");
     caine.rightEyeTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_RightEye.png");
+
+    //////////////////////////////////Butterfly//////////////////////////////////
+    butterfly.leftWingTextureID = TextureLoader::loadTexture(
+        "Model/Butterfly/Textures/Butterfly_LeftWing.png"
+    );
+
+    butterfly.rightWingTextureID = TextureLoader::loadTexture(
+        "Model/Butterfly/Textures/Butterfly_RightWing.png"
+    );
+
+    butterfly.tursoTextureID = TextureLoader::loadTexture(
+        "Model/Butterfly/Textures/Butterfly_Turso.png"
+    );
+
+    //////////////////////////////////Kinger Roll//////////////////////////////////
+    kingerRoll.rollTextureID = TextureLoader::loadTexture(
+        "Model/Kinger_Roll/Textures/Kinger_Roll.png"
+    );
     // Example Later:
     // battleEnvironment.init();
     // Continue here, please, thanks XD.
@@ -463,6 +512,8 @@ void MyVirtualWorld::draw()
     kinger.draw();
     gloinks.draw();
     caine.draw();
+    butterfly.draw();
+    kingerRoll.draw();
 }
 
 void MyVirtualWorld::tickTime()
