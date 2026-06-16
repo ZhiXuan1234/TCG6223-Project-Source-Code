@@ -30,9 +30,13 @@
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
+			<Add option="-std=c++11" />
 			<Add option="-fexceptions" />
 		</Compiler>
 		<Linker>
+			<Add option="-lopengl32" />
+			<Add option="-lglu32" />
+			<Add option="-lglut32" />
 			<Add option="-lwinmm" />
 		</Linker>
 		<Unit filename="AudioManager.cpp" />
@@ -51,10 +55,10 @@
 		<Unit filename="Gloinks.hpp" />
 		<Unit filename="Kinger.cpp" />
 		<Unit filename="Kinger.hpp" />
-		<Unit filename="KingerRoll.cpp" />
-		<Unit filename="KingerRoll.hpp" />
 		<Unit filename="KingerAnimation.cpp" />
 		<Unit filename="KingerAnimation.hpp" />
+		<Unit filename="KingerRoll.cpp" />
+		<Unit filename="KingerRoll.hpp" />
 		<Unit filename="ObjModel.cpp" />
 		<Unit filename="ObjModel.hpp" />
 		<Unit filename="TextureLoader.cpp" />

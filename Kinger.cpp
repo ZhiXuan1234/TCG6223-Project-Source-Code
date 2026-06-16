@@ -10,6 +10,56 @@ extern ProjectWorld::MyVirtualWorld myvirtualworld;
 using namespace ProjectKinger;
 
 GLuint headTextureID;
+static void drawSolidCubeFallback(float size)
+{
+    float h = size / 2.0f;
+
+    glBegin(GL_QUADS);
+
+    // Front
+    glNormal3f(0.0f, 0.0f, 1.0f);
+    glVertex3f(-h, -h, h);
+    glVertex3f( h, -h, h);
+    glVertex3f( h,  h, h);
+    glVertex3f(-h,  h, h);
+
+    // Back
+    glNormal3f(0.0f, 0.0f, -1.0f);
+    glVertex3f( h, -h, -h);
+    glVertex3f(-h, -h, -h);
+    glVertex3f(-h,  h, -h);
+    glVertex3f( h,  h, -h);
+
+    // Left
+    glNormal3f(-1.0f, 0.0f, 0.0f);
+    glVertex3f(-h, -h, -h);
+    glVertex3f(-h, -h,  h);
+    glVertex3f(-h,  h,  h);
+    glVertex3f(-h,  h, -h);
+
+    // Right
+    glNormal3f(1.0f, 0.0f, 0.0f);
+    glVertex3f(h, -h,  h);
+    glVertex3f(h, -h, -h);
+    glVertex3f(h,  h, -h);
+    glVertex3f(h,  h,  h);
+
+    // Top
+    glNormal3f(0.0f, 1.0f, 0.0f);
+    glVertex3f(-h, h,  h);
+    glVertex3f( h, h,  h);
+    glVertex3f( h, h, -h);
+    glVertex3f(-h, h, -h);
+
+    // Bottom
+    glNormal3f(0.0f, -1.0f, 0.0f);
+    glVertex3f(-h, -h, -h);
+    glVertex3f( h, -h, -h);
+    glVertex3f( h, -h,  h);
+    glVertex3f(-h, -h,  h);
+
+    glEnd();
+}
 
 Kinger::Kinger()
 {
@@ -46,7 +96,7 @@ void Kinger::jump()
 {
     // Task 1: Movement Lock
     if (animation.isHealing) return;
-    
+
     if (isGrounded)
     {
         velocityY = 30.0f; // Initial jump impulse
@@ -119,14 +169,14 @@ void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const b
         // should bake it into deltaTime, OR we accept a speed parameter.
         // For simplicity we use a fixed internal speed constant.
         float KINGER_INTERNAL_SPEED = 45.0f; // world units per second
-        
+
         // Task 4: Apply Speed Boost during Roll
         if (animation.isRolling)
         {
             const float ROLL_SPEED_MULTIPLIER = 2.5f;
             KINGER_INTERNAL_SPEED *= ROLL_SPEED_MULTIPLIER;
         }
-        
+
         float step = KINGER_INTERNAL_SPEED * deltaTime;
 
         float normFwd = fwd / magnitude;
@@ -166,10 +216,10 @@ void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const b
     // --- Task 2: Implement Gravity & Physics Update ---
     // Apply gravity constantly
     velocityY += -30.0f * deltaTime;
-    
+
     // Update vertical position
     posY += velocityY * deltaTime;
-    
+
     // Floor Collision
     if (posY <= -18.7f) // -18.7f is ground level
     {
@@ -182,7 +232,7 @@ void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const b
             jumpScaleY = 0.8f; // Squash effect on landing
         }
     }
-    
+
     // Smoothly recover jumpScaleY back to 1.0f (normal size)
     jumpScaleY += (1.0f - jumpScaleY) * 10.0f * deltaTime;
 }
@@ -426,27 +476,27 @@ void Kinger::drawLeftHand() const
 
     glPushMatrix();
     glTranslatef(0.0f, animation.hoverOffset + animation.skillBodyYOffset + animation.leftArmReloadYOffset, animation.skillBodyZOffset); //for animation y axis
-    
+
     // Task 4: Apply Left Arm Transformation
     // The left arm physically rotates across the chest during the reload state.
     glRotatef(animation.leftArmReloadYaw, 0.0f, 1.0f, 0.0f);
     glRotatef(animation.leftArmReloadPitch, 1.0f, 0.0f, 0.0f);
-    
+
     // Task 2: Left Arm Heal Pitch
     glRotatef(animation.leftArmHealPitch, 1.0f, 0.0f, 0.0f);
-    
+
     // Dynamically track the gun's vertical aim so the hands meet perfectly no matter where the camera looks!
     float visualPitch = aimPitch;
     if (visualPitch < -0.7f) visualPitch = -0.7f;
     if (visualPitch >  1.2f) visualPitch =  1.2f;
     float gunAimPitch = (-visualPitch * 57.2957795f);
-    
+
     // We only want the left hand to track the gun's aim WHEN it is actively reloading.
     // The deeper into the reload (leftArmReloadYaw goes from 0 to -135), the more it tracks.
     float aimBlend = (animation.leftArmReloadYaw / -135.0f);
     if (aimBlend < 0.0f) aimBlend = 0.0f;
     if (aimBlend > 1.0f) aimBlend = 1.0f;
-    
+
     glRotatef(gunAimPitch * aimBlend, 1.0f, 0.0f, 0.0f);
 
     glRotatef(-animation.armRotation, 1.0f, 0.0f, 0.0f); //for animation x axis
@@ -477,28 +527,28 @@ void Kinger::drawRightHandwGun() const
 
     glPushMatrix();
     glTranslatef(0.0f, animation.hoverOffset + animation.skillBodyYOffset, animation.skillBodyZOffset);
-    
+
     // Task 4: Apply Right Arm Transformation (Reloading)
     // The right arm brings the gun inward toward the chest so the left hand can reach it.
     glRotatef(animation.rightArmReloadYaw, 0.0f, 1.0f, 0.0f);
     glRotatef(animation.rightArmReloadPitch, 1.0f, 0.0f, 0.0f);
-    
+
     // Task 3: Apply the Horizontal Translation
     // Slide the arm straight back into Kinger's shoulder along the Z axis
     glTranslatef(0.0f, 0.0f, animation.armRecoilOffset);
-    
+
     // Note: The old glRotatef(animation.skillArmRotation...) swing logic has been removed
     // to support the rapid linear recoil instead.
-    
+
     // Visually aim the gun up or down to align with the camera pitch.
     float visualPitch = aimPitch;
     if (visualPitch < -0.7f) visualPitch = -0.7f;
     if (visualPitch >  1.2f) visualPitch =  1.2f;
-    
+
     // Bug Fix: Combine the idle breathing sway WITH the aiming pitch.
     // Task 1 & 2: Isolating the Right Arm during combat.
-    // Because animation.armRotation is mathematically scaled to 0.0f inside updateIdleState 
-    // when shooting, adding it here will effectively freeze the gun steady while still 
+    // Because animation.armRotation is mathematically scaled to 0.0f inside updateIdleState
+    // when shooting, adding it here will effectively freeze the gun steady while still
     // allowing the rest of the body (hover, cloth) to flutter naturally!
     float finalArmPitch = (-visualPitch * 57.2957795f) + animation.armRotation;
     glRotatef(finalArmPitch, 1.0f, 0.0f, 0.0f);
@@ -574,25 +624,25 @@ void Kinger::drawBullet() const
     // --- Task 2: Create the Trajectory Render Function ---
     // Draw the glowing tracer line from the gun barrel to the bullet
     glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT);
-    
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_LINE_SMOOTH);
     glLineWidth(3.0f);
-    
+
     // Disable texturing to draw a pure colored line
     glDisable(GL_TEXTURE_2D);
-    
+
     // Bright yellow/orange with 0.6f alpha
     glColor4f(1.0f, 0.8f, 0.0f, 0.6f);
-    
+
     glBegin(GL_LINES);
         // Start exactly where the bullet spawned (gun barrel tip)
         glVertex3f(animation.bulletStartX, animation.bulletStartY, animation.bulletStartZ);
         // End at the current bullet position
         glVertex3f(animation.bulletPosX, animation.bulletPosY, animation.bulletPosZ);
     glEnd();
-    
+
     glPopAttrib();
 
     glPushMatrix();
@@ -609,7 +659,16 @@ void Kinger::drawBullet() const
 
     glDisable(GL_CULL_FACE);
     glEnable(GL_NORMALIZE);
-    glutSolidSphere(0.3, 10, 10); // Reduced size from 0.8 to 0.3 for a smaller bullet
+    static GLUquadricObj* bulletQuadric = NULL;
+
+    if (bulletQuadric == NULL)
+    {
+        bulletQuadric = gluNewQuadric();
+        gluQuadricNormals(bulletQuadric, GLU_SMOOTH);
+    }
+
+    gluSphere(bulletQuadric, 0.3, 10, 10);
+
     glDisable(GL_NORMALIZE);
     glEnable(GL_CULL_FACE);
 
@@ -643,7 +702,7 @@ void Kinger::draw() const
         // Rotate rapidly along the X-axis to simulate rolling forward
         float rollSpin = animation.rollTimer * 1500.0f;
         glRotatef(rollSpin, 1.0f, 0.0f, 0.0f);
-        
+
         // Draw the pre-loaded ball model from the global world instance
         ::myvirtualworld.kingerRoll.draw();
         glPopMatrix();
@@ -655,10 +714,10 @@ void Kinger::draw() const
         // =====================================================================
         // The body leans forward/backward based on movement momentum.
         glPushMatrix();
-        
+
         // Apply the squash and stretch from jumping AND the dodge roll squash
         glScalef(1.0f, jumpScaleY * animation.rollSquashY, 1.0f);
-        
+
         glRotatef(currentLeanPitch, 1.0f, 0.0f, 0.0f); // Lean forward/backward
         // Removed currentLeanRoll as requested to simplify the animation
 
@@ -670,9 +729,9 @@ void Kinger::draw() const
         drawCloth();
         drawBucket();
         drawBucketHandle();
-        
+
     // Removed the static butterfly rendering from inside the leaning body group
-        
+
         glPopMatrix();
 
         // =====================================================================
@@ -696,7 +755,7 @@ void Kinger::draw() const
     if (animation.isHealing)
     {
         glPushMatrix();
-        
+
         // 1. Hand Position (Phase 1 start)
         const float HAND_OFFSET_X = -12.0f; // Approximate left hand X
         const float HAND_OFFSET_Y = 15.0f;  // Arm raised height (above ground)
@@ -705,7 +764,7 @@ void Kinger::draw() const
         // Convert local to world based on Kinger's rotation
         float hx = (HAND_OFFSET_X * std::cos(facingYaw)) + (HAND_OFFSET_Z * -std::sin(facingYaw));
         float hz = (HAND_OFFSET_X * -std::sin(facingYaw)) + (HAND_OFFSET_Z * -std::cos(facingYaw));
-        
+
         float handWorldX = posX + hx;
         float handWorldY = posY + 18.7f + HAND_OFFSET_Y;
         float handWorldZ = posZ + hz;
@@ -749,73 +808,73 @@ void Kinger::draw() const
 
         glDisable(GL_TEXTURE_2D);
         glDisable(GL_LIGHTING);
-        
+
         // Draw the actual Butterfly Model
         glPushMatrix();
         glTranslatef(flyX, flyY, flyZ);
         glScalef(scale, scale, scale);
-        
+
         glPushMatrix();
         glScalef(0.3f, 0.3f, 0.3f); // Base particle scale factor
         // Let the actual Butterfly model handle its own drawing and flapping!
         ::myvirtualworld.butterfly.draw(flapAngle);
         glPopMatrix();
         glPopMatrix(); // End Butterfly Transform
-        
+
         // Draw High-Quality '+' Symbols ONLY when butterfly stops at the top (Phase 3)
         if (animation.healTimer >= 1.5f)
         {
             glPushMatrix();
             // Anchor the particle burst to the Bucket
             glTranslatef(bucketWorldX, bucketWorldY, bucketWorldZ);
-            
+
             glColor3f(0.2f, 1.0f, 0.2f); // Vibrant light green
-            
+
             // Timer strictly for the crosses (goes from 0.0 to 0.5s)
             float crossTimer = animation.healTimer - 1.5f;
-            
+
             // Draw multiple floating 3D crosses to create a premium particle emitter effect
             for (int i = 0; i < 3; i++)
             {
                 glPushMatrix();
-                
+
                 // Offset each cross in height and give it a slight orbit around the center
                 float offsetTimer = crossTimer + (i * 0.1f);
                 float height = offsetTimer * 15.0f; // Fast rise
                 float orbitX = std::sin(offsetTimer * 10.0f + i) * 3.0f;
                 float orbitZ = std::cos(offsetTimer * 10.0f + i) * 3.0f;
-                
+
                 glTranslatef(orbitX, height, orbitZ);
-                
+
                 // Slowly spin the crosses
                 glRotatef(offsetTimer * 300.0f, 0.0f, 1.0f, 0.0f);
-                
+
                 // Fade out individually as they rise
-                float crossScale = 1.0f - (height / 10.0f); 
+                float crossScale = 1.0f - (height / 10.0f);
                 if (crossScale < 0.0f) crossScale = 0.0f;
                 // Base scale modifier
-                crossScale *= 0.7f; 
+                crossScale *= 0.7f;
                 glScalef(crossScale, crossScale, crossScale);
-                
+
                 // Build a thick, premium 3D plus sign using intersecting cubes
                 // Vertical block
                 glPushMatrix();
                 glScalef(0.6f, 2.0f, 0.6f);
-                glutSolidCube(1.0);
+                drawSolidCubeFallback(1.0f);
                 glPopMatrix();
-                
+
                 // Horizontal block
                 glPushMatrix();
                 glScalef(2.0f, 0.6f, 0.6f);
-                glutSolidCube(1.0);
+                drawSolidCubeFallback(1.0f);
                 glPopMatrix();
-                
+
                 glPopMatrix();
             }
-            
+
             glPopMatrix(); // End '+' Burst Transform
         }
-        
+
         glEnable(GL_LIGHTING);
         glPopMatrix();
     }

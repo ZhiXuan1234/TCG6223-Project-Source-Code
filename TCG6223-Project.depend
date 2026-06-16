@@ -187,12 +187,13 @@
 	<intrin.h>
 	<arm_neon.h>
 
-1781227209 source:c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\cnamain.cpp
+1781585904 source:c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\cnamain.cpp
 	"xx.hpp"
 	<cstdlib>
 	<iostream>
 	<iomanip>
 	<cmath>
+	<windows.h>
 	<GL/glut.h>
 	"CNAmain.hpp"
 	"CNAWorld.hpp"
@@ -203,7 +204,7 @@
 	<iostream>
 	<GL/glut.h>
 
-1781339036 c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\cnaworld.hpp
+1781583853 c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\cnaworld.hpp
 	"CNAmain.hpp"
 	"Kinger.hpp"
 	"Gloinks.hpp"
@@ -213,15 +214,16 @@
 	"Environment.hpp"
 	"AudioManager.hpp"
 
-1779366056 c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\kinger.hpp
+1781583853 c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\kinger.hpp
 	"ObjModel.hpp"
+	"KingerAnimation.hpp"
 	<string>
 
 1777100445 c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\objmodel.hpp
 	<vector>
 	<string>
 
-1781339036 source:c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\cnaworld.cpp
+1781583853 source:c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\cnaworld.cpp
 	<GL/glut.h>
 	<iostream>
 	"CNAWorld.hpp"
@@ -231,10 +233,12 @@
 	<GL/glut.h>
 	<string>
 
-1779366056 source:c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\kinger.cpp
+1781586355 source:c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\kinger.cpp
 	<GL/glut.h>
 	<iostream>
+	<cmath>
 	"Kinger.hpp"
+	"CNAWorld.hpp"
 
 1779448326 source:c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\objmodel.cpp
 	<GL/glut.h>
@@ -283,7 +287,7 @@
 	<iostream>
 	"Gloinks.hpp"
 
-1781349403 source:c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\environment.cpp
+1781349713 source:c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\environment.cpp
 	<windows.h>
 	<GL/gl.h>
 	<GL/glut.h>
@@ -463,11 +467,11 @@
 	<GL/glut.h>
 	"KingerRoll.hpp"
 
-1781339036 source:c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\butterfly.cpp
+1781583853 source:c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\butterfly.cpp
 	<GL/glut.h>
 	"Butterfly.hpp"
 
-1781339036 c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\butterfly.hpp
+1781583853 c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\butterfly.hpp
 	<GL/glut.h>
 	<string>
 	"ObjModel.hpp"
@@ -482,7 +486,13 @@
 	<string>
 	"ObjModel.hpp"
 
-1781339036 source:c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\kingerroll.cpp
+1781583853 source:c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\kingerroll.cpp
 	<GL/glut.h>
 	"KingerRoll.hpp"
+
+1781583853 c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\kingeranimation.hpp
+
+1781583853 source:c:\users\user\onedrive - personal\documents\code\github\tcg6223-project-source-code\kingeranimation.cpp
+	"KingerAnimation.hpp"
+	<cmath>
 

@@ -72,6 +72,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cmath>
+#include <windows.h>
 #include <GL/glut.h>
 
 #include "CNAmain.hpp"
@@ -131,21 +132,21 @@ bool keyStates[256] = {false};
 void drawCrosshair()
 {
     glDisable(GL_DEPTH_TEST);
-    
+
     // Switch to 2D UI projection
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
     gluOrtho2D(0, window.width, 0, window.height);
-    
+
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
-    
+
     float cx = (window.width / 2.0f)-15;
     float cy = (window.height / 2.0f)+30;
     float size = 10.0f;
-    
+
     // Draw a simple white cross
     glColor3f(1.0f, 1.0f, 1.0f);
     glBegin(GL_LINES);
@@ -154,15 +155,26 @@ void drawCrosshair()
         glVertex2f(cx, cy - size);
         glVertex2f(cx, cy + size);
     glEnd();
-    
+
     glPopMatrix();
-    
+
     // Restore 3D projection
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
-    
+
     glEnable(GL_DEPTH_TEST);
+}
+
+void updateKeyStatesFromWindows()
+{
+    keyStates['w'] = keyStates['W'] = (GetAsyncKeyState('W') & 0x8000) != 0;
+    keyStates['a'] = keyStates['A'] = (GetAsyncKeyState('A') & 0x8000) != 0;
+    keyStates['s'] = keyStates['S'] = (GetAsyncKeyState('S') & 0x8000) != 0;
+    keyStates['d'] = keyStates['D'] = (GetAsyncKeyState('D') & 0x8000) != 0;
+
+    // Left mouse button for auto shooting
+    keyStates[1] = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
 }
 
 void myDisplayFunc(void)
@@ -252,6 +264,7 @@ void myDisplayFunc(void)
  glFlush();
  glutSwapBuffers();
 
+ updateKeyStatesFromWindows();
  myvirtualworld.tickTime(cameraYaw, cameraPitch, keyStates);
  glutPostRedisplay();
 }
@@ -279,25 +292,25 @@ void myKeyboardFunc(unsigned char key, int x, int y)
  {
     // Task 4: Free the Spacebar for Jumping
     case ' ': myvirtualworld.kinger.jump(); break;
-    
+
     // Task 4: Map Roll Skill
-    case 'c': 
-    case 'C': 
-        myvirtualworld.kinger.animation.castRollSkill(); 
+    case 'c':
+    case 'C':
+        myvirtualworld.kinger.animation.castRollSkill();
         break;
-        
+
     // Task 5: Input Binding for Reload
     case 'r':
     case 'R':
         myvirtualworld.kinger.animation.castReload();
         break;
-        
+
     // Task 4: Map Heal Skill
     case 'f':
     case 'F':
         myvirtualworld.kinger.animation.castHealSkill(myvirtualworld.kinger.currentHealth, myvirtualworld.kinger.maxHealth);
         break;
-    
+
     case 27: exit(1); break; // ESC
  }
  glutPostRedisplay();
@@ -393,18 +406,18 @@ void myMouseFunc(int button, int state, int x, int y)
                 // Task 4: Map Mouse to Shoot
                 // Fire immediately on click
                 myvirtualworld.kinger.animation.castGunSkill();
-                
+
                 // Map Left Click to a special keyState index (1) for continuous auto-fire
-                keyStates[1] = true; 
+                keyStates[1] = true;
             }
             if (state == GLUT_UP)
             {
                 keyStates[1] = false;
             }
             break;
-            
+
         case GLUT_RIGHT_BUTTON:
-            // Left click is currently unused in TPS mode, 
+            // Left click is currently unused in TPS mode,
             // but kept structurally intact.
             break;
     }
@@ -412,7 +425,7 @@ void myMouseFunc(int button, int state, int x, int y)
 
 void myMotionFunc(int x, int y)
 {
-    // In TPS mode, clicking and dragging (MotionFunc) should do exactly 
+    // In TPS mode, clicking and dragging (MotionFunc) should do exactly
     // the same thing as moving the mouse without clicking (PassiveMotionFunc).
     // This allows the player to continue aiming while holding Right Click to shoot!
     myPassiveMotionFunc(x, y);
@@ -514,7 +527,7 @@ void myInit()
  glutDisplayFunc(myDisplayFunc);
  glutReshapeFunc(myReshapeFunc);
  glutKeyboardFunc(myKeyboardFunc);
- glutKeyboardUpFunc(myKeyboardUpFunc);  // clears keyStates when keys are released
+ //glutKeyboardUpFunc(myKeyboardUpFunc);  // clears keyStates when keys are released
  glutSpecialFunc(mySpecialFunc);
  glutMotionFunc(myMotionFunc);
  glutMouseFunc(myMouseFunc);
@@ -551,13 +564,13 @@ void myWelcome()
  cout << "|   Mouse (move)        => rotate camera (yaw + pitch)          |\n";
  cout << "|   Arrow UP/DOWN       => camera pitch (keyboard fallback)     |\n";
  cout << "|   Arrow LEFT/RIGHT    => camera yaw   (keyboard fallback)     |\n";
- cout << "|   SPACE               => Kinger gun skill                     |\n";
+ cout << "|   SPACE               => jump                                 |\n";
  cout << "|   HOME                => restore defaults                     |\n";
  cout << "|   ESC                 => exit                                 |\n";
  cout << "|                                                               |\n";
- cout << "|   F1  => toggle shading / wire-frame                         |\n";
- cout << "|   F2  => toggle axis rendering                               |\n";
- cout << "|   F3  => toggle lighting on / off                            |\n";
+ cout << "|   F1  => toggle shading / wire-frame                          |\n";
+ cout << "|   F2  => toggle axis rendering                                |\n";
+ cout << "|   F3  => toggle lighting on / off                             |\n";
  cout << "*****************************************************************\n";
  cout << "|                      H A V E   F U N  !!!                    |\n";
  cout << "*****************************************************************\n";
