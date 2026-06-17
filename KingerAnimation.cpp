@@ -43,12 +43,16 @@ KingerAnimation::KingerAnimation()
     , isHealing(false)
     , healTimer(0.0f)
     , leftArmHealPitch(0.0f)
+    , isHurt(false)
+    , hurtTimer(0.0f)
+    , isDead(false)
+    , deathTimer(0.0f)
 {
 }
 
 void KingerAnimation::castGunSkill()
 {
-    if (isRolling || isReloading || currentAmmo <= 0 || isHealing) return;
+    if (isRolling || isReloading || currentAmmo <= 0 || isHealing || isHurt) return;
 
     if (!isCastingSkill)
     {
@@ -181,7 +185,7 @@ void KingerAnimation::updateIdleState(float deltaTime)
 
 void KingerAnimation::castRollSkill()
 {
-    if (isCastingSkill || isRolling || isReloading || isHealing) return;
+    if ( isRolling || isReloading || isHealing) return;
 
     if (!isRolling)
     {
@@ -234,7 +238,7 @@ void KingerAnimation::updateRollState(float deltaTime)
 
 void KingerAnimation::castReload()
 {
-    if (isReloading || isRolling || isHealing) return;
+    if (isReloading || isRolling || isHealing || isHurt) return;
 
     isReloading = true;
     reloadTimer = 0.0f;
@@ -296,7 +300,7 @@ void KingerAnimation::updateReloadState(float deltaTime)
 
 void KingerAnimation::castHealSkill(int& currentHealth, int maxHealth)
 {
-    if (isHealing || isRolling || butterflyCharges <= 0) return;
+    if (isHealing || isRolling || butterflyCharges <= 0 || isHurt) return;
 
     isHealing = true;
     healTimer = 0.0f;
@@ -332,4 +336,98 @@ void KingerAnimation::updateHealState(float deltaTime)
         isHealing = false;
         leftArmHealPitch = 0.0f;
     }
+}
+
+void KingerAnimation::updateHurtState(float deltaTime)
+{
+    if (!isHurt) return;
+
+    hurtTimer += deltaTime;
+    if (hurtTimer >= HURT_DURATION)
+    {
+        isHurt = false;
+        hurtTimer = 0.0f;
+    }
+}
+
+void KingerAnimation::triggerHurt()
+{
+    isHurt = true;
+    hurtTimer = 0.0f;
+
+    // Immediately stop ongoing skills
+    isCastingSkill = false;
+    skillTimer = 0.0f;
+    skillArmRotation = 0.0f;
+    skillBodyYOffset = 0.0f;
+    skillBodyZOffset = 0.0f;
+    armRecoilOffset = 0.0f;
+    isBulletActive = false;
+    bulletDistance = 0.0f;
+
+    isRolling = false;
+    rollTimer = 0.0f;
+    rollPhase = 0;
+    rollSquashY = 1.0f;
+    showBallModel = false;
+
+    isReloading = false;
+    reloadTimer = 0.0f;
+    leftArmReloadPitch = 0.0f;
+    leftArmReloadYaw = 0.0f;
+    leftArmReloadYOffset = 0.0f;
+    rightArmReloadPitch = 0.0f;
+    rightArmReloadYaw = 0.0f;
+
+    isHealing = false;
+    healTimer = 0.0f;
+    leftArmHealPitch = 0.0f;
+}
+
+void KingerAnimation::updateDeathState(float deltaTime)
+{
+    if (!isDead) return;
+
+    deathTimer += deltaTime;
+    if (deathTimer > RESPAWN_DELAY)
+    {
+        deathTimer = RESPAWN_DELAY;
+    }
+}
+
+void KingerAnimation::triggerDeath()
+{
+    isDead = true;
+    deathTimer = 0.0f;
+
+    // Immediately stop ongoing skills
+    isCastingSkill = false;
+    skillTimer = 0.0f;
+    skillArmRotation = 0.0f;
+    skillBodyYOffset = 0.0f;
+    skillBodyZOffset = 0.0f;
+    armRecoilOffset = 0.0f;
+    isBulletActive = false;
+    bulletDistance = 0.0f;
+
+    isRolling = false;
+    rollTimer = 0.0f;
+    rollPhase = 0;
+    rollSquashY = 1.0f;
+    showBallModel = false;
+
+    isReloading = false;
+    reloadTimer = 0.0f;
+    leftArmReloadPitch = 0.0f;
+    leftArmReloadYaw = 0.0f;
+    leftArmReloadYOffset = 0.0f;
+    rightArmReloadPitch = 0.0f;
+    rightArmReloadYaw = 0.0f;
+
+    isHealing = false;
+    healTimer = 0.0f;
+    leftArmHealPitch = 0.0f;
+
+    isHurt = false;
+    hurtTimer = 0.0f;
 }

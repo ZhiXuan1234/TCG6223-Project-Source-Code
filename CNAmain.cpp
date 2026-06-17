@@ -257,6 +257,18 @@ void myKeyboardFunc(unsigned char key, int x, int y)
         myvirtualworld.kinger.animation.castHealSkill(myvirtualworld.kinger.currentHealth, myvirtualworld.kinger.maxHealth);
         break;
 
+    // Test Damage/Hurt Visual Effect
+    case 'h':
+    case 'H':
+        myvirtualworld.kinger.takeDamage(10);
+        break;
+
+    // Test Death Visual Effect
+    case 'k':
+    case 'K':
+        myvirtualworld.kinger.takeDamage(100);
+        break;
+
     case 27: exit(1); break; // ESC
  }
  glutPostRedisplay();

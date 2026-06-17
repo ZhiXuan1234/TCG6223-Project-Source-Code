@@ -50,6 +50,8 @@ public:
     bool isGrounded;
     float jumpScaleY; 
     void jump();
+    void takeDamage(int amount);
+    void rebirth();
 
     float aimPitch;
 

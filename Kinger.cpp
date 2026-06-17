@@ -92,19 +92,69 @@ Kinger::Kinger()
 void Kinger::jump()
 {
 
-    if (animation.isHealing) return;
+    if (animation.isHealing || animation.isDead) return;
 
     if (isGrounded)
     {
-        velocityY = 30.0f; 
+        velocityY = 50.0f; 
         isGrounded = false;
         jumpScaleY = 1.2f; 
     }
 }
 
+void Kinger::takeDamage(int amount)
+{
+    if (animation.isHurt || animation.isRolling || animation.isDead) return; // Prevent damage while hurt, rolling, or dead
+
+    currentHealth -= amount;
+    if (currentHealth <= 0)
+    {
+        currentHealth = 0;
+        animation.triggerDeath();
+    }
+    else
+    {
+        animation.triggerHurt();
+    }
+}
+
+void Kinger::rebirth()
+{
+    currentHealth = maxHealth;
+    posX = 0.0f;
+    posY = -18.7f;
+    posZ = 0.0f;
+    facingYaw = 0.0f;
+    velocityY = 0.0f;
+    isGrounded = true;
+
+    // Reset animation death state
+    animation.isDead = false;
+    animation.deathTimer = 0.0f;
+}
+
 
 void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const bool* keyStates)
 {
+    if (animation.isDead)
+    {
+        animation.updateDeathState(deltaTime);
+        // Apply gravity during death falling
+        velocityY += -50.0f * deltaTime;
+        posY += velocityY * deltaTime;
+        if (posY <= -18.7f)
+        {
+            posY = -18.7f;
+            velocityY = 0.0f;
+        }
+
+        if (animation.deathTimer >= RESPAWN_DELAY)
+        {
+            rebirth();
+        }
+        return;
+    }
+
     facingYaw = cameraYaw;
     aimPitch = -cameraPitch;
 
@@ -122,6 +172,7 @@ void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const b
     animation.updateRollState(deltaTime);
     animation.updateReloadState(deltaTime);
     animation.updateHealState(deltaTime);
+    animation.updateHurtState(deltaTime);
 
 
     if (!animation.isHealing)
@@ -143,6 +194,12 @@ void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const b
         {
             const float ROLL_SPEED_MULTIPLIER = 2.5f;
             KINGER_INTERNAL_SPEED *= ROLL_SPEED_MULTIPLIER;
+        }
+
+        if (animation.isHurt)
+        {
+            const float HURT_SPEED_MULTIPLIER = 0.5f;
+            KINGER_INTERNAL_SPEED *= HURT_SPEED_MULTIPLIER;
         }
 
         float step = KINGER_INTERNAL_SPEED * deltaTime;
@@ -176,7 +233,7 @@ void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const b
     }
 
     // Apply gravity constantly
-    velocityY += -50.0f * deltaTime;
+    velocityY += -60.0f * deltaTime;
 
     posY += velocityY * deltaTime;
 
@@ -601,43 +658,89 @@ void Kinger::draw() const
     const float MODEL_FACING_OFFSET = 3.14159265f;
     glRotatef((facingYaw + MODEL_FACING_OFFSET) * RAD_TO_DEG, 0.0f, 1.0f, 0.0f);
 
-    if (animation.showBallModel)
+    // Apply Minecraft-style death animation: fall stiffly to the right side
+    if (animation.isDead)
     {
-        glPushMatrix();
-        float rollSpin = animation.rollTimer * 1500.0f;
-        glRotatef(rollSpin, 1.0f, 0.0f, 0.0f);
-
-        ::myvirtualworld.kingerRoll.draw();
-        glPopMatrix();
+        float progress = animation.deathTimer / DEATH_DURATION;
+        if (progress > 1.0f) progress = 1.0f;
+        float fallAngle = progress * 90.0f; // 0 to 90 degrees
+        
+        glTranslatef(0.0f, -18.7f, 0.0f);
+        glRotatef(fallAngle, 0.0f, 0.0f, 1.0f);
+        glTranslatef(0.0f, 18.7f, 0.0f);
     }
-    else
+
+    bool shouldRender = true;
+    if (animation.isHurt)
     {
-        glPushMatrix();
+        // Toggle visibility every 0.05 seconds (10 Hz blink rate)
+        if (std::fmod(animation.hurtTimer, 0.1f) < 0.05f)
+        {
+            shouldRender = false;
+        }
+    }
 
-        glScalef(1.0f, jumpScaleY * animation.rollSquashY, 1.0f);
+    if (shouldRender)
+    {
+        if (animation.isHurt || animation.isDead)
+        {
+            glPushAttrib(GL_LIGHTING_BIT | GL_CURRENT_BIT | GL_ENABLE_BIT);
+            glDisable(GL_TEXTURE_2D);
 
-        glRotatef(currentLeanPitch, 1.0f, 0.0f, 0.0f);
+            GLfloat redColor[]   = { 1.0f, 0.0f, 0.0f, 1.0f };
+            GLfloat blackColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-        drawHead();
-        drawHeadPiece();
-        drawLeftEye();
-        drawRightEyeN();
-        drawBody();
-        drawCloth();
-        drawBucket();
-        drawBucketHandle();
+            glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, redColor);
+            glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, redColor);
+            glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, redColor);
+            glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, blackColor);
 
-        glPopMatrix();
+            glColor3f(1.0f, 0.0f, 0.0f);
+        }
 
-        glPushMatrix();
+        if (animation.showBallModel)
+        {
+            glPushMatrix();
+            float rollSpin = animation.rollTimer * 1500.0f;
+            glRotatef(rollSpin, 1.0f, 0.0f, 0.0f);
 
-        drawLeftHand();
+            ::myvirtualworld.kingerRoll.draw();
+            glPopMatrix();
+        }
+        else
+        {
+            glPushMatrix();
 
-        glRotatef(25, 1.0f, 0.0f, 0.0f);
-        drawRightHandwGun();
-        glRotatef(-25, 1.0f, 0.0f, 0.0f);
+            glScalef(1.0f, jumpScaleY * animation.rollSquashY, 1.0f);
 
-        glPopMatrix();
+            glRotatef(currentLeanPitch, 1.0f, 0.0f, 0.0f);
+
+            drawHead();
+            drawHeadPiece();
+            drawLeftEye();
+            drawRightEyeN();
+            drawBody();
+            drawCloth();
+            drawBucket();
+            drawBucketHandle();
+
+            glPopMatrix();
+
+            glPushMatrix();
+
+            drawLeftHand();
+
+            glRotatef(25, 1.0f, 0.0f, 0.0f);
+            drawRightHandwGun();
+            glRotatef(-25, 1.0f, 0.0f, 0.0f);
+
+            glPopMatrix();
+        }
+
+        if (animation.isHurt || animation.isDead)
+        {
+            glPopAttrib();
+        }
     }
 
     glPopMatrix();

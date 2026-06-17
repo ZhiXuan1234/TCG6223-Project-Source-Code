@@ -511,7 +511,7 @@ void MyVirtualWorld::draw()
     /*Characters*/
     kinger.draw();
     //gloinks.draw();
-    //caine.draw();
+    caine.draw();
     //butterfly.draw();
     //kingerRoll.draw();
 }
