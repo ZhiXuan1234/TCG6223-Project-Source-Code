@@ -128,6 +128,7 @@ float currentCameraDirY = 0.0f;
 float currentCameraDirZ = 0.0f;
 
 bool showHitboxes = false; // Toggle to render green hitboxes around active Gloinks
+bool showDebugMenu = false; // Toggle to render the debug context menu on the right
 
 void drawCrosshair()
 {
@@ -161,6 +162,136 @@ void drawCrosshair()
     glMatrixMode(GL_MODELVIEW);
 
     glEnable(GL_DEPTH_TEST);
+}
+
+static void drawString(void* font, const char* str, float x, float y)
+{
+    glRasterPos2f(x, y);
+    while (*str)
+    {
+        glutBitmapCharacter(font, *str);
+        str++;
+    }
+}
+
+void drawDebugMenu()
+{
+    glPushAttrib(GL_LIGHTING_BIT | GL_ENABLE_BIT | GL_CURRENT_BIT | GL_COLOR_BUFFER_BIT);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_DEPTH_TEST);
+    
+    // Enable blending for transparency
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, window.width, 0, window.height);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    if (showDebugMenu)
+    {
+        // Define panel boundaries
+        float width = 290.0f;
+        float height = 240.0f;
+        float padding = 20.0f;
+        float right = window.width - padding;
+        float left = right - width;
+        float top = window.height - padding;
+        float bottom = top - height;
+
+        // Draw semi-transparent background (Valve Dark theme)
+        glColor4f(0.08f, 0.08f, 0.12f, 0.85f);
+        glBegin(GL_QUADS);
+            glVertex2f(left, bottom);
+            glVertex2f(right, bottom);
+            glVertex2f(right, top);
+            glVertex2f(left, top);
+        glEnd();
+
+        // Draw border (Source Console light border)
+        glLineWidth(2.0f);
+        glColor4f(0.35f, 0.5f, 0.75f, 0.7f);
+        glBegin(GL_LINE_LOOP);
+            glVertex2f(left, bottom);
+            glVertex2f(right, bottom);
+            glVertex2f(right, top);
+            glVertex2f(left, top);
+        glEnd();
+
+        // Text color for options (Source Console Light Green/Yellow)
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "--- DEBUG MENU ---", left + 20.0f, top - 30.0f);
+
+        glColor4f(0.9f, 0.9f, 0.9f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "1. Start Game", left + 25.0f, top - 70.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "2. Reset Game", left + 25.0f, top - 105.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "3. Debug Environment", left + 25.0f, top - 140.0f);
+        
+        glColor4f(0.7f, 0.7f, 0.8f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "0. Exit Menu", left + 25.0f, top - 180.0f);
+
+        // Status lines at the bottom of panel
+        glColor4f(0.5f, 0.6f, 0.7f, 1.0f);
+        glLineWidth(1.0f);
+        glBegin(GL_LINES);
+            glVertex2f(left + 15.0f, bottom + 40.0f);
+            glVertex2f(right - 15.0f, bottom + 40.0f);
+        glEnd();
+
+        glColor4f(0.8f, 0.8f, 0.8f, 0.9f);
+        if (myvirtualworld.isDebugMode)
+        {
+            drawString(GLUT_BITMAP_HELVETICA_12, "Mode: DEBUG ENVIRONMENT (Keys 1-0 active)", left + 20.0f, bottom + 15.0f);
+        }
+        else
+        {
+            drawString(GLUT_BITMAP_HELVETICA_12, "Mode: ACTIVE GAMEPLAY (Keys 1-0 disabled)", left + 20.0f, bottom + 15.0f);
+        }
+    }
+    else
+    {
+        // Menu is closed, render a subtle hint on the right
+        float width = 170.0f;
+        float height = 35.0f;
+        float padding = 20.0f;
+        float right = window.width - padding;
+        float left = right - width;
+        float top = window.height - padding;
+        float bottom = top - height;
+
+        // Semi-transparent tiny hint bg
+        glColor4f(0.08f, 0.08f, 0.12f, 0.6f);
+        glBegin(GL_QUADS);
+            glVertex2f(left, bottom);
+            glVertex2f(right, bottom);
+            glVertex2f(right, top);
+            glVertex2f(left, top);
+        glEnd();
+
+        glColor4f(0.35f, 0.5f, 0.75f, 0.5f);
+        glBegin(GL_LINE_LOOP);
+            glVertex2f(left, bottom);
+            glVertex2f(right, bottom);
+            glVertex2f(right, top);
+            glVertex2f(left, top);
+        glEnd();
+
+        glColor4f(0.0f, 0.9f, 0.5f, 0.9f);
+        drawString(GLUT_BITMAP_HELVETICA_12, "[z] Open Debug Menu", left + 15.0f, bottom + 12.0f);
+    }
+
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+
+    glPopAttrib();
 }
 
 void updateKeyStatesFromWindows()
@@ -300,6 +431,7 @@ void myDisplayFunc(void)
 
  // Draw 2D UI elements last
  drawCrosshair();
+ drawDebugMenu();
 
  glFlush();
  glutSwapBuffers();
@@ -318,6 +450,39 @@ void myReshapeFunc(int width, int height)
 
 void myKeyboardFunc(unsigned char key, int x, int y)
 {
+ // Toggle debug menu with 'z' or 'Z'
+ if (key == 'z' || key == 'Z')
+ {
+     showDebugMenu = !showDebugMenu;
+     glutPostRedisplay();
+     return;
+ }
+
+ // If debug menu is open, handle navigation and intercept menu actions
+ if (showDebugMenu)
+ {
+     switch (key)
+     {
+         case '1':
+             myvirtualworld.startGame();
+             showDebugMenu = false;
+             break;
+         case '2':
+             myvirtualworld.resetGame();
+             showDebugMenu = false;
+             break;
+         case '3':
+             myvirtualworld.debugEnvironment();
+             showDebugMenu = false;
+             break;
+         case '0':
+             showDebugMenu = false;
+             break;
+     }
+     glutPostRedisplay();
+     return;
+ }
+
  keyStates[key] = true;
 
  switch (key)
@@ -367,36 +532,36 @@ void myKeyboardFunc(unsigned char key, int x, int y)
         myvirtualworld.caine.triggerHurt();
         break;
 
-    // Caine Hand Animation Trigger & Gloink Hurt Triggers
+    // Caine Hand Animation Trigger & Gloink Hurt Triggers (Only active in Debug Environment)
     case '1':
-        myvirtualworld.gloinks.hurtGloink(0);
+        if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(0);
         break;
     case '2':
-        myvirtualworld.gloinks.hurtGloink(1);
+        if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(1);
         break;
     case '3':
-        myvirtualworld.gloinks.hurtGloink(2);
+        if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(2);
         break;
     case '4':
-        myvirtualworld.gloinks.hurtGloink(3);
+        if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(3);
         break;
     case '5':
-        myvirtualworld.gloinks.hurtGloink(4);
+        if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(4);
         break;
     case '6':
-        myvirtualworld.gloinks.hurtGloink(5);
+        if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(5);
         break;
     case '7':
-        myvirtualworld.caine.animation.triggerShootingState();
+        if (myvirtualworld.isDebugMode) myvirtualworld.caine.animation.triggerShootingState();
         break;
     case '8':
-        myvirtualworld.caine.animation.toggleLayDown();
+        if (myvirtualworld.isDebugMode) myvirtualworld.caine.animation.toggleLayDown();
         break;
     case '9':
-        myvirtualworld.caine.animation.toggleLeanForward();
+        if (myvirtualworld.isDebugMode) myvirtualworld.caine.animation.toggleLeanForward();
         break;
     case '0':
-        myvirtualworld.caine.triggerDeath();
+        if (myvirtualworld.isDebugMode) myvirtualworld.caine.triggerDeath();
         break;
 
     case 27: exit(1); break; // ESC

@@ -2,7 +2,7 @@
  TCG6223 Computer Graphics
  FIST, Multimedia University
 
-  File: CNAworld.cpp (touched to trigger compilation update for drawing-state linked collision boundaries)
+  File: CNAworld.cpp (touched to trigger compilation update for drawing-state linked boundaries, debug menu, and game states)
   Objective: show environment / World & declare model file path
 
  Reference code from:
@@ -505,6 +505,9 @@ void MyVirtualWorld::init()
 
     gloinks.initGloinks();
 
+    isDebugMode = true;
+    isCaineAndGloinksActive = true;
+
     //==================================================================
     // Notes: These two must put add the end of this function.
     /*Whole World Lightning*/
@@ -522,9 +525,11 @@ void MyVirtualWorld::draw()
     /*Characters*/
     kinger.draw();
     
-    gloinks.draw();
-    
-    caine.draw();
+    if (isCaineAndGloinksActive)
+    {
+        gloinks.draw();
+        caine.draw();
+    }
     
     //butterfly.draw();
     //kingerRoll.draw();
@@ -552,10 +557,62 @@ void MyVirtualWorld::tickTime(float cameraYaw, float cameraPitch, const bool* ke
         }
 
         kinger.update(deltaTime, cameraYaw, cameraPitch, keyStates);
-        caine.update(deltaTime);
-        gloinks.updateGloinks(deltaTime);
+        
+        if (isCaineAndGloinksActive)
+        {
+            caine.update(deltaTime);
+            gloinks.updateGloinks(deltaTime);
+        }
     }
     // -------------------------------------------------------------------------
 
     environment.tickTime();
+}
+
+void MyVirtualWorld::resetGame()
+{
+    // Clear Gloinks
+    gloinks.animation.activeGloinks.clear();
+
+    // Reset Caine states
+    caine.triggerDeath();
+    caine.animation.isDead = false;
+    if (caine.spawnPositionSaved)
+    {
+        caine.posX = caine.spawnX;
+        caine.posY = caine.spawnY;
+        caine.posZ = caine.spawnZ;
+    }
+    else
+    {
+        caine.posX = 0.0f;
+        caine.posY = 0.0f;
+        caine.posZ = -120.0f;
+    }
+
+    // Reset player position and health
+    kinger.rebirth();
+
+    // Reset rendering/debugging states
+    isCaineAndGloinksActive = false;
+    isDebugMode = false;
+}
+
+void MyVirtualWorld::startGame()
+{
+    // Execute reset game first
+    resetGame();
+}
+
+void MyVirtualWorld::debugEnvironment()
+{
+    // Execute reset game first
+    resetGame();
+
+    // Enable models and debug mode
+    isCaineAndGloinksActive = true;
+    isDebugMode = true;
+
+    // Spawn Gloinks
+    gloinks.initGloinks();
 }

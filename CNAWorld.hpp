@@ -47,9 +47,18 @@ public:
     /*Audios*/
     AudioManager audioManager;
 
+    // Debug Mode & Spawning states
+    bool isDebugMode;
+    bool isCaineAndGloinksActive;
+
     void init();
     void draw();
     void tickTime(float cameraYaw, float cameraPitch, const bool* keyStates);
+
+    // Game state actions
+    void startGame();
+    void resetGame();
+    void debugEnvironment();
 };
 
 } // namespace ProjectWorld
