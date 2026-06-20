@@ -1,6 +1,7 @@
 #include <GL/glut.h>
 #include <iostream>
 #include <cmath>
+#include <cstdlib>
 #include "Kinger.hpp"
 #include "CNAWorld.hpp"
 
@@ -102,6 +103,11 @@ Kinger::Kinger()
     isGrounded = true;
     jumpScaleY = 1.0f;
     uniformScale = 1.0f;
+
+    for (int i = 0; i < MAX_MUZZLE_PARTICLES; i++)
+    {
+        muzzleParticles[i].active = false;
+    }
 }
 
 /**
@@ -209,6 +215,13 @@ void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const b
     animation.updateIdleState(deltaTime);
 
     animation.updateSkillState(deltaTime, cameraYaw, cameraPitch, posX, posY, posZ, uniformScale);
+    if (animation.shouldSpawnMuzzleFlash)
+    {
+        spawnMuzzleFlash(animation.bulletStartX, animation.bulletStartY, animation.bulletStartZ);
+        animation.shouldSpawnMuzzleFlash = false;
+    }
+    updateMuzzleParticles(deltaTime);
+
     animation.updateRollState(deltaTime);
     animation.updateReloadState(deltaTime);
     animation.updateHealState(deltaTime);
@@ -766,6 +779,129 @@ void Kinger::drawBullet() const
     glPopMatrix();
 }
 
+void Kinger::spawnMuzzleFlash(float x, float y, float z)
+{
+    int spawned = 0;
+    for (int i = 0; i < MAX_MUZZLE_PARTICLES && spawned < 15; i++)
+    {
+        if (!muzzleParticles[i].active)
+        {
+            muzzleParticles[i].active = true;
+            muzzleParticles[i].posX = x;
+            muzzleParticles[i].posY = y;
+            muzzleParticles[i].posZ = z;
+            
+            // Random direction in a sphere
+            float theta = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * 3.14159265f;
+            float phi = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 3.14159265f;
+            float speed = 10.0f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 20.0f; // 10 to 30 units/sec
+            
+            muzzleParticles[i].velX = speed * std::sin(phi) * std::cos(theta);
+            muzzleParticles[i].velY = speed * std::cos(phi);
+            muzzleParticles[i].velZ = speed * std::sin(phi) * std::sin(theta);
+            
+            // Muzzle flash color (Yellow / Orange spectrum)
+            // Red is always 1.0f. Green varies to create orange/yellow. Blue is 0.0f.
+            float gVal = 0.3f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 0.6f; // 0.3 to 0.9
+            muzzleParticles[i].r = 1.0f;
+            muzzleParticles[i].g = gVal;
+            muzzleParticles[i].b = 0.0f;
+            
+            muzzleParticles[i].size = 1.5f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f; // 1.5 to 3.5
+            muzzleParticles[i].alpha = 1.0f;
+            muzzleParticles[i].lifeTime = 0.0f;
+            muzzleParticles[i].maxLife = 0.15f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 0.15f; // 0.15 to 0.30 seconds
+            
+            spawned++;
+        }
+    }
+}
+
+void Kinger::updateMuzzleParticles(float deltaTime)
+{
+    for (int i = 0; i < MAX_MUZZLE_PARTICLES; i++)
+    {
+        if (muzzleParticles[i].active)
+        {
+            muzzleParticles[i].posX += muzzleParticles[i].velX * deltaTime;
+            muzzleParticles[i].posY += muzzleParticles[i].velY * deltaTime;
+            muzzleParticles[i].posZ += muzzleParticles[i].velZ * deltaTime;
+            
+            // Air resistance
+            muzzleParticles[i].velX *= 0.92f;
+            muzzleParticles[i].velY *= 0.92f;
+            muzzleParticles[i].velZ *= 0.92f;
+            
+            muzzleParticles[i].lifeTime += deltaTime;
+            if (muzzleParticles[i].lifeTime >= muzzleParticles[i].maxLife)
+            {
+                muzzleParticles[i].active = false;
+            }
+            else
+            {
+                // Fade out alpha
+                float progress = muzzleParticles[i].lifeTime / muzzleParticles[i].maxLife;
+                muzzleParticles[i].alpha = 1.0f - progress;
+                
+                // Grow size slightly as they expand, then shrink
+                if (progress < 0.2f)
+                {
+                    muzzleParticles[i].size += deltaTime * 8.0f;
+                }
+                else
+                {
+                    muzzleParticles[i].size -= deltaTime * 4.0f;
+                    if (muzzleParticles[i].size < 0.1f) muzzleParticles[i].size = 0.1f;
+                }
+            }
+        }
+    }
+}
+
+void Kinger::drawMuzzleParticles() const
+{
+    glPushAttrib(GL_LIGHTING_BIT | GL_ENABLE_BIT | GL_CURRENT_BIT);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    
+    for (int i = 0; i < MAX_MUZZLE_PARTICLES; i++)
+    {
+        if (muzzleParticles[i].active)
+        {
+            glPushMatrix();
+            glTranslatef(muzzleParticles[i].posX, muzzleParticles[i].posY, muzzleParticles[i].posZ);
+            
+            // Spin particles for a dynamic look
+            float spin = muzzleParticles[i].lifeTime * 250.0f;
+            glRotatef(spin, 1.0f, 1.0f, 0.0f);
+            
+            glColor4f(muzzleParticles[i].r, muzzleParticles[i].g, muzzleParticles[i].b, muzzleParticles[i].alpha);
+            
+            // Draw a solid cube
+            float s = muzzleParticles[i].size * 0.5f;
+            glBegin(GL_QUADS);
+                // Front
+                glVertex3f(-s, -s,  s); glVertex3f( s, -s,  s); glVertex3f( s,  s,  s); glVertex3f(-s,  s,  s);
+                // Back
+                glVertex3f(-s, -s, -s); glVertex3f(-s,  s, -s); glVertex3f( s,  s, -s); glVertex3f( s, -s, -s);
+                // Top
+                glVertex3f(-s,  s, -s); glVertex3f(-s,  s,  s); glVertex3f( s,  s,  s); glVertex3f( s,  s, -s);
+                // Bottom
+                glVertex3f(-s, -s, -s); glVertex3f( s, -s, -s); glVertex3f( s, -s,  s); glVertex3f(-s, -s,  s);
+                // Right
+                glVertex3f( s, -s, -s); glVertex3f( s,  s, -s); glVertex3f( s,  s,  s); glVertex3f( s, -s,  s);
+                // Left
+                glVertex3f(-s, -s, -s); glVertex3f(-s, -s,  s); glVertex3f(-s,  s,  s); glVertex3f(-s,  s, -s);
+            glEnd();
+            
+            glPopMatrix();
+        }
+    }
+    glPopAttrib();
+}
+
 /**
  * Renders the entire hierarchical character structure, combining limbs, bodies, and items.
  */
@@ -989,4 +1125,5 @@ void Kinger::draw() const
     // Render gun bullet particles slightly offset from model center
     glTranslatef(0.0f, 3.0f, 0.0f);
     drawBullet();
+    drawMuzzleParticles();
 }

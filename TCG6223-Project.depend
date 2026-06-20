@@ -638,7 +638,7 @@
 	"ObjModel.hpp"
 	"CaineAnimation.hpp"
 
-1781968756 c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\caine.hpp
+1781977810 c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\caine.hpp
 	<GL/glut.h>
 	<string>
 	"ObjModel.hpp"
@@ -655,9 +655,11 @@
 	"CNAmain.hpp"
 	"CNAWorld.hpp"
 
-1781950842 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\cnamain.cpp
+1781976757 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\cnamain.cpp
 	"xx.hpp"
 	<cstdlib>
+	<cstdio>
+	<cstring>
 	<iostream>
 	<iomanip>
 	<cmath>
@@ -691,7 +693,7 @@
 	"KingerAnimation.hpp"
 	<string>
 
-1781944740 c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\kinger.hpp
+1781977239 c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\kinger.hpp
 	"ObjModel.hpp"
 	"KingerAnimation.hpp"
 	<string>
@@ -709,7 +711,7 @@
 	<string>
 	"ObjModel.hpp"
 
-1781953126 c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\kingeranimation.hpp
+1781977245 c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\kingeranimation.hpp
 
 1781929786 c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\gloinks.hpp
 	"ObjModel.hpp"
@@ -741,7 +743,7 @@
 	<GL/glut.h>
 	<string>
 
-1781972958 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\environment.cpp
+1781974149 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\environment.cpp
 	<windows.h>
 	<GL/gl.h>
 	<GL/glut.h>
@@ -774,10 +776,11 @@
 	"Kinger.hpp"
 	"CNAWorld.hpp"
 
-1781944753 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\kinger.cpp
+1781977291 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\kinger.cpp
 	<GL/glut.h>
 	<iostream>
 	<cmath>
+	<cstdlib>
 	"Kinger.hpp"
 	"CNAWorld.hpp"
 
@@ -799,7 +802,7 @@
 	<string>
 	"ObjModel.hpp"
 
-1781959591 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\kingeranimation.cpp
+1781977257 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\kingeranimation.cpp
 	"KingerAnimation.hpp"
 	<cmath>
 	"CNAWorld.hpp"

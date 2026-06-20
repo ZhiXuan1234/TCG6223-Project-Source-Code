@@ -95,6 +95,7 @@ Caine::Caine()
 
     sweepActive = false;
     sweepDirection = 0;
+    nextSweepDirection = 0;
     sweepCurrentPos = 0.0f;
     sweepSpeed = 150.0f;
     sweepTimer = 0.0f;
@@ -151,6 +152,7 @@ void Caine::resetAI()
     sweepActive = false;
     sweepTimer = 0.0f;
     sweepInterval = 2.0f;
+    nextSweepDirection = rand() % 4;
     wasLayingDown = false;
 }
 
@@ -325,6 +327,7 @@ void Caine::update(float deltaTime)
         {
             sweepTimer = 0.0f;
             sweepInterval = 2.0f; // first attack spawns after 2 seconds
+            nextSweepDirection = rand() % 4; // pre-roll direction for the HUD warning
         }
         wasLayingDown = animation.isLayingDown;
 
@@ -337,10 +340,10 @@ void Caine::update(float deltaTime)
                 {
                     sweepActive = true;
                     sweepTimer = 0.0f;
-                    
-                    // Choose random direction
-                    sweepDirection = rand() % 4;
-                    
+
+                    // Use the pre-rolled direction (shown in the HUD warning)
+                    sweepDirection = nextSweepDirection;
+
                     // Choose start coordinate
                     if (sweepDirection == 0 || sweepDirection == 2)
                     {
@@ -350,9 +353,10 @@ void Caine::update(float deltaTime)
                     {
                         sweepCurrentPos = 290.0f;
                     }
-                    
-                    // Set next cooldown interval during LayDown (constant 2 seconds)
+
+                    // Set next cooldown interval and pre-roll the NEXT sweep direction
                     sweepInterval = 2.0f;
+                    nextSweepDirection = rand() % 4;
                 }
             }
         }

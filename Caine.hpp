@@ -204,7 +204,8 @@ public:
 
     // Sweep attack variables
     bool sweepActive;
-    int sweepDirection; // 0=N->S, 1=S->N, 2=W->E, 3=E->W
+    int sweepDirection;     // 0=N->S, 1=S->N, 2=W->E, 3=E->W  (active sweep)
+    int nextSweepDirection; // Pre-rolled direction for the upcoming sweep (used by warning UI)
     float sweepCurrentPos;
     float sweepSpeed;
     float sweepTimer;

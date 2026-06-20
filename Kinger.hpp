@@ -8,6 +8,18 @@
 namespace ProjectKinger
 {
 
+struct MuzzleParticle
+{
+    bool active;
+    float posX, posY, posZ;
+    float velX, velY, velZ;
+    float size;
+    float r, g, b;
+    float alpha;
+    float lifeTime;
+    float maxLife;
+};
+
 /**
  * Kinger
  * Represents the main player character Kinger, managing individual model parts,
@@ -149,6 +161,13 @@ public:
     void drawBucket() const;
     void drawBucketHandle() const;
     void drawBullet() const;
+
+    // Muzzle flash particle systems
+    static const int MAX_MUZZLE_PARTICLES = 40;
+    MuzzleParticle muzzleParticles[MAX_MUZZLE_PARTICLES];
+    void spawnMuzzleFlash(float x, float y, float z);
+    void updateMuzzleParticles(float deltaTime);
+    void drawMuzzleParticles() const;
 
     /**
      * Renders the entire hierarchical character structure, combining limbs, bodies, and items.

@@ -87,6 +87,8 @@ public:
     bool isDead;            // Flag indicating if the character is dead
     float deathTimer;       // Timer tracking progress of the death falling sequence
 
+    bool shouldSpawnMuzzleFlash; // Trigger flag for muzzle flash particle spawning
+
     /**
      * Constructor that resets all states, timers, and factors to their defaults.
      */

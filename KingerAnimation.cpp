@@ -105,6 +105,7 @@ KingerAnimation::KingerAnimation()
     , hurtTimer(0.0f)
     , isDead(false)
     , deathTimer(0.0f)
+    , shouldSpawnMuzzleFlash(false)
 {
 }
 
@@ -161,6 +162,7 @@ void KingerAnimation::updateSkillState(float deltaTime, float currentYaw, float 
             if (!isBulletActive)
             {
                 isBulletActive = true;
+                shouldSpawnMuzzleFlash = true;
                 shootYaw       = currentYaw;
                 shootPitch     = currentPitch;
                 bulletDistance = 0.0f;
