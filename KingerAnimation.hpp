@@ -52,6 +52,7 @@ public:
     float bulletDirZ;       // Trajectory direction unit vector Z component
     
     float bulletDistance;   // Total distance traveled by the active bullet
+    float bulletLifeTimer;   // Timer tracking how long the bullet has been active
 
     // Roll State Variables
     bool  isRolling;        // Flag indicating if the roll ability is active

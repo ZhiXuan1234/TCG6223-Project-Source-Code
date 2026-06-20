@@ -35,6 +35,9 @@ public:
     bool isDead;            // Flag indicating if Caine is dead
     float deathTimer;       // Timer tracking the death and respawn sequence [0.0, 2.0]
 
+    // Laughing State
+    bool isLaughing;        // Flag indicating if Caine is laughing
+
     // Hurt/Damage State Variables
     bool isHurt;            // Flag indicating if Caine is hurt and flashing
     float hurtTimer;        // Timer tracking hurt duration

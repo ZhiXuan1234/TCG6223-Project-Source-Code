@@ -83,6 +83,7 @@ KingerAnimation::KingerAnimation()
     , bulletDirY(0.0f)
     , bulletDirZ(0.0f)
     , bulletDistance(0.0f)
+    , bulletLifeTimer(0.0f)
     , isRolling(false)
     , rollTimer(0.0f)
     , rollPhase(0)
@@ -151,63 +152,65 @@ void KingerAnimation::castGunSkill()
  */
 void KingerAnimation::updateSkillState(float deltaTime, float currentYaw, float currentPitch, float kingerX, float kingerY, float kingerZ, float modelScale)
 {
-    if (!isCastingSkill)
+    if (isCastingSkill)
     {
-        skillArmRotation = 0.0f;
-        skillBodyYOffset = 0.0f;
-        skillBodyZOffset = 0.0f;
-        return;
-    }
+        skillTimer += deltaTime;
 
-    skillTimer += deltaTime;
-
-    if (skillTimer <= 0.05f)
-    {
-        if (!isBulletActive)
+        if (skillTimer <= 0.05f)
         {
-            isBulletActive = true;
-            shootYaw       = currentYaw;
-            shootPitch     = currentPitch;
-            bulletDistance = 0.0f;
+            if (!isBulletActive)
+            {
+                isBulletActive = true;
+                shootYaw       = currentYaw;
+                shootPitch     = currentPitch;
+                bulletDistance = 0.0f;
+                bulletLifeTimer = 0.0f;
 
-            // Access the global camera variables updated in CNAmain.cpp
-            extern float currentCameraEyeX;
-            extern float currentCameraEyeY;
-            extern float currentCameraEyeZ;
+                // Access the global camera variables updated in CNAmain.cpp
+                extern float currentCameraEyeX;
+                extern float currentCameraEyeY;
+                extern float currentCameraEyeZ;
 
-            extern float currentCameraDirX;
-            extern float currentCameraDirY;
-            extern float currentCameraDirZ;
+                extern float currentCameraDirX;
+                extern float currentCameraDirY;
+                extern float currentCameraDirZ;
 
-            // 1. Set bullet start position directly to the center of the camera, offset by 10.0f units forward
-            bulletStartX = currentCameraEyeX + currentCameraDirX * 40.0f;
-            bulletStartY = (currentCameraEyeY - 5.0f) + currentCameraDirY * 40.0f;
-            bulletStartZ = currentCameraEyeZ + currentCameraDirZ * 40.0f;
+                // 1. Set bullet start position directly to the center of the camera, offset by 10.0f units forward
+                bulletStartX = currentCameraEyeX + currentCameraDirX * 40.0f;
+                bulletStartY = (currentCameraEyeY - 5.0f) + currentCameraDirY * 40.0f;
+                bulletStartZ = currentCameraEyeZ + currentCameraDirZ * 40.0f;
 
-            bulletPosX = bulletStartX;
-            bulletPosY = bulletStartY;
-            bulletPosZ = bulletStartZ;
+                bulletPosX = bulletStartX;
+                bulletPosY = bulletStartY;
+                bulletPosZ = bulletStartZ;
 
-            // 2. Set trajectory direction directly to the camera's look direction
-            bulletDirX = currentCameraDirX;
-            bulletDirY = currentCameraDirY;
-            bulletDirZ = currentCameraDirZ;
+                // 2. Set trajectory direction directly to the camera's look direction
+                bulletDirX = currentCameraDirX;
+                bulletDirY = currentCameraDirY;
+                bulletDirZ = currentCameraDirZ;
+            }
+
+            float t = skillTimer / 0.05f;
+            armRecoilOffset = t * 3.0f;
         }
-
-        float t = skillTimer / 0.05f;
-        armRecoilOffset = t * 3.0f;
-    }
-    else if (skillTimer <= 0.25f)
-    {
-        float t = (skillTimer - 0.05f) / 0.20f;
-        float ease = 1.0f - std::cos(t * 3.14159265f / 2.0f); 
-        armRecoilOffset = 3.0f * (1.0f - ease);
+        else if (skillTimer <= 0.25f)
+        {
+            float t = (skillTimer - 0.05f) / 0.20f;
+            float ease = 1.0f - std::cos(t * 3.14159265f / 2.0f); 
+            armRecoilOffset = 3.0f * (1.0f - ease);
+        }
+        else
+        {
+            isCastingSkill   = false;
+            skillTimer       = 0.0f;
+            armRecoilOffset  = 0.0f;
+            skillArmRotation = 0.0f;
+            skillBodyYOffset = 0.0f;
+            skillBodyZOffset = 0.0f;
+        }
     }
     else
     {
-        isCastingSkill   = false;
-        skillTimer       = 0.0f;
-        armRecoilOffset  = 0.0f;
         skillArmRotation = 0.0f;
         skillBodyYOffset = 0.0f;
         skillBodyZOffset = 0.0f;
@@ -215,46 +218,76 @@ void KingerAnimation::updateSkillState(float deltaTime, float currentYaw, float 
 
     if (isBulletActive)
     {
-        float oldBulletPosX = bulletPosX;
-        float oldBulletPosY = bulletPosY;
-        float oldBulletPosZ = bulletPosZ;
-
-        float step = BULLET_TRAVEL_SPEED * deltaTime;
-        bulletDistance += step;
-
-        bulletPosX += step * bulletDirX;
-        bulletPosY += step * bulletDirY;
-        bulletPosZ += step * bulletDirZ;
-
-        // AABB Box Hitbox segment intersection check against all active Gloinks
-        for (size_t i = 0; i < ::myvirtualworld.gloinks.animation.activeGloinks.size(); ++i)
-        {
-            auto& gloink = ::myvirtualworld.gloinks.animation.activeGloinks[i];
-            if (gloink.isDead) continue;
-
-            Vec3 gloinkCenter = ::myvirtualworld.gloinks.getGloinkWorldCenter(i);
-            float halfExtent = 6.0f * ::myvirtualworld.gloinks.uniformScale;
-
-            float minX = gloinkCenter.x - halfExtent;
-            float maxX = gloinkCenter.x + halfExtent;
-            float minY = gloinkCenter.y - halfExtent;
-            float maxY = gloinkCenter.y + halfExtent;
-            float minZ = gloinkCenter.z - halfExtent;
-            float maxZ = gloinkCenter.z + halfExtent;
-
-            if (checkSegmentAABB(oldBulletPosX, oldBulletPosY, oldBulletPosZ,
-                                 bulletPosX, bulletPosY, bulletPosZ,
-                                 minX, maxX, minY, maxY, minZ, maxZ))
-            {
-                ::myvirtualworld.gloinks.hurtGloink(i);
-                isBulletActive = false;
-                break;
-            }
-        }
-
-        if (isBulletActive && bulletDistance > -BULLET_MAX_DISTANCE) 
+        bulletLifeTimer += deltaTime;
+        if (bulletLifeTimer >= 2.0f)
         {
             isBulletActive = false;
+        }
+        else
+        {
+            float oldBulletPosX = bulletPosX;
+            float oldBulletPosY = bulletPosY;
+            float oldBulletPosZ = bulletPosZ;
+
+            float step = BULLET_TRAVEL_SPEED * deltaTime;
+            bulletDistance += step;
+
+            bulletPosX += step * bulletDirX;
+            bulletPosY += step * bulletDirY;
+            bulletPosZ += step * bulletDirZ;
+
+            // Check collision against Caine if he is active and alive
+            if (::myvirtualworld.isCaineActive && !::myvirtualworld.caine.animation.isDead)
+            {
+                Vec3 caineCenter = ::myvirtualworld.caine.getCaineWorldCenter();
+                float halfExtent = 12.0f * ::myvirtualworld.caine.uniformScale;
+
+                float minX = caineCenter.x - halfExtent;
+                float maxX = caineCenter.x + halfExtent;
+                float minY = caineCenter.y - halfExtent;
+                float maxY = caineCenter.y + halfExtent;
+                float minZ = caineCenter.z - halfExtent;
+                float maxZ = caineCenter.z + halfExtent;
+
+                if (checkSegmentAABB(oldBulletPosX, oldBulletPosY, oldBulletPosZ,
+                                     bulletPosX, bulletPosY, bulletPosZ,
+                                     minX, maxX, minY, maxY, minZ, maxZ))
+                {
+                    ::myvirtualworld.caine.takeDamage(1);
+                    isBulletActive = false;
+                }
+            }
+
+            // AABB Box Hitbox segment intersection check against all active Gloinks
+            for (size_t i = 0; i < ::myvirtualworld.gloinks.animation.activeGloinks.size(); ++i)
+            {
+                auto& gloink = ::myvirtualworld.gloinks.animation.activeGloinks[i];
+                if (gloink.isDead) continue;
+
+                Vec3 gloinkCenter = ::myvirtualworld.gloinks.getGloinkWorldCenter(i);
+                float halfExtent = 6.0f * ::myvirtualworld.gloinks.uniformScale;
+
+                float minX = gloinkCenter.x - halfExtent;
+                float maxX = gloinkCenter.x + halfExtent;
+                float minY = gloinkCenter.y - halfExtent;
+                float maxY = gloinkCenter.y + halfExtent;
+                float minZ = gloinkCenter.z - halfExtent;
+                float maxZ = gloinkCenter.z + halfExtent;
+
+                if (checkSegmentAABB(oldBulletPosX, oldBulletPosY, oldBulletPosZ,
+                                     bulletPosX, bulletPosY, bulletPosZ,
+                                     minX, maxX, minY, maxY, minZ, maxZ))
+                {
+                    ::myvirtualworld.gloinks.hurtGloink(i);
+                    isBulletActive = false;
+                    break;
+                }
+            }
+
+            if (isBulletActive && bulletDistance > -BULLET_MAX_DISTANCE) 
+            {
+                isBulletActive = false;
+            }
         }
     }
 }

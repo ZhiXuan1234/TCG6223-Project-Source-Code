@@ -87,11 +87,31 @@ public:
      */
     void triggerHurt();
 
+    // AI state variables
+    float aiFlightTimer;         // time elapsed in current flight path
+    float aiFlightDuration;      // duration to fly in current direction before picking new target
+    float aiTargetX;             // flight target X
+    float aiTargetZ;             // flight target Z
+    float aiTeleportTimer;       // timer tracking time until next teleport
+    float aiTeleportInterval;    // random interval between teleports
+    bool isTeleporting;          // shrinking phase
+    bool isAppearing;            // growing phase
+    float teleportTransitionTimer; // timer for scale shrinking/growing
+    float visualScaleFactor;     // dynamic scale factor multiplied during teleport
+    float facingYaw;             // horizontal angle facing the player
+
+    void resetAI();
+
     /**
      * Sets the uniform scale of the character model.
      * scale The scaling factor to apply uniformly.
      */
     void setScale(float scale);
+
+    int currentHealth;
+    int maxHealth;
+    void takeDamage(int amount);
+    Vec3 getCaineWorldCenter() const;
 
     // Texture Bindings
     GLuint hatTextureID;

@@ -49,7 +49,8 @@ public:
 
     // Debug Mode & Spawning states
     bool isDebugMode;
-    bool isCaineAndGloinksActive;
+    bool isCaineActive;
+    bool isGloinksActive;
 
     void init();
     void draw();
