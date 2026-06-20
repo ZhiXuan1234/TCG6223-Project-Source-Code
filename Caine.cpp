@@ -61,6 +61,45 @@ Caine::Caine()
     facingYaw = 0.0f;
     currentHealth = 5;
     maxHealth = 5;
+
+    shootCooldownTimer = 0.0f;
+    shootInterval = 1.0f;
+    for (int i = 0; i < MAX_CAINE_PROJECTILES; i++)
+    {
+        projectiles[i].active = false;
+        projectiles[i].posX = 0.0f;
+        projectiles[i].posY = 0.0f;
+        projectiles[i].posZ = 0.0f;
+        projectiles[i].dirX = 0.0f;
+        projectiles[i].dirY = 0.0f;
+        projectiles[i].dirZ = 0.0f;
+        projectiles[i].lifeTimer = 0.0f;
+    }
+    for (int i = 0; i < MAX_TELEPORT_PARTICLES; i++)
+    {
+        teleportParticles[i].active = false;
+        teleportParticles[i].posX = 0.0f;
+        teleportParticles[i].posY = 0.0f;
+        teleportParticles[i].posZ = 0.0f;
+        teleportParticles[i].velX = 0.0f;
+        teleportParticles[i].velY = 0.0f;
+        teleportParticles[i].velZ = 0.0f;
+        teleportParticles[i].size = 0.0f;
+        teleportParticles[i].r = 0.0f;
+        teleportParticles[i].g = 0.0f;
+        teleportParticles[i].b = 0.0f;
+        teleportParticles[i].alpha = 0.0f;
+        teleportParticles[i].lifeTime = 0.0f;
+        teleportParticles[i].maxLife = 0.0f;
+    }
+
+    sweepActive = false;
+    sweepDirection = 0;
+    sweepCurrentPos = 0.0f;
+    sweepSpeed = 150.0f;
+    sweepTimer = 0.0f;
+    sweepInterval = 2.0f;
+    wasLayingDown = false;
 }
 
 void Caine::resetAI()
@@ -98,6 +137,21 @@ void Caine::resetAI()
     animation.isShootingState = false;
 
     currentHealth = maxHealth;
+
+    shootCooldownTimer = 0.0f;
+    for (int i = 0; i < MAX_CAINE_PROJECTILES; i++)
+    {
+        projectiles[i].active = false;
+    }
+    for (int i = 0; i < MAX_TELEPORT_PARTICLES; i++)
+    {
+        teleportParticles[i].active = false;
+    }
+
+    sweepActive = false;
+    sweepTimer = 0.0f;
+    sweepInterval = 2.0f;
+    wasLayingDown = false;
 }
 
 /**
@@ -185,6 +239,22 @@ void Caine::update(float deltaTime)
                 posX += (fdx / dist) * flySpeed * deltaTime;
                 posZ += (fdz / dist) * flySpeed * deltaTime;
             }
+
+            // 4. Handle shooting at the player (only in default state, not in LayDown or LeaningForward)
+            if (!animation.isLayingDown && !animation.isLeaningForward)
+            {
+                shootCooldownTimer += deltaTime;
+                if (shootCooldownTimer >= shootInterval)
+                {
+                    shootCooldownTimer = 0.0f;
+                    animation.triggerShootingState();
+                    spawnProjectile();
+                }
+            }
+            else
+            {
+                shootCooldownTimer = 0.0f;
+            }
         }
         else if (isTeleporting)
         {
@@ -195,6 +265,9 @@ void Caine::update(float deltaTime)
             {
                 progress = 1.0f;
                 isTeleporting = false;
+                
+                // Spawn poof at old position before moving Caine
+                spawnTeleportPoof(posX, posY, posZ);
                 
                 // Teleport to a random location in the arena
                 posX = -120.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / 240.0f));
@@ -224,6 +297,9 @@ void Caine::update(float deltaTime)
                 isAppearing = true;
                 teleportTransitionTimer = 0.0f;
                 
+                // Spawn poof at new position after placing Caine
+                spawnTeleportPoof(posX, posY, posZ);
+                
                 // Pick next random teleport cooldown interval (between 8 and 12 seconds)
                 aiTeleportTimer = 0.0f;
                 aiTeleportInterval = 8.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / 4.0f));
@@ -242,10 +318,187 @@ void Caine::update(float deltaTime)
             }
             visualScaleFactor = progress;
         }
+
+        // 5. Handle sweep attack (only in LayDown state)
+        // Detect transition into LayDown state to set initial 2-second delay
+        if (animation.isLayingDown && !wasLayingDown)
+        {
+            sweepTimer = 0.0f;
+            sweepInterval = 2.0f; // first attack spawns after 2 seconds
+        }
+        wasLayingDown = animation.isLayingDown;
+
+        if (animation.isLayingDown)
+        {
+            if (!sweepActive)
+            {
+                sweepTimer += deltaTime;
+                if (sweepTimer >= sweepInterval)
+                {
+                    sweepActive = true;
+                    sweepTimer = 0.0f;
+                    
+                    // Choose random direction
+                    sweepDirection = rand() % 4;
+                    
+                    // Choose start coordinate
+                    if (sweepDirection == 0 || sweepDirection == 2)
+                    {
+                        sweepCurrentPos = -290.0f;
+                    }
+                    else
+                    {
+                        sweepCurrentPos = 290.0f;
+                    }
+                    
+                    // Set next cooldown interval during LayDown (constant 2 seconds)
+                    sweepInterval = 2.0f;
+                }
+            }
+        }
+        else
+        {
+            sweepTimer = 0.0f;
+        }
+
+        // Update active sweep movement and collision checking
+        if (sweepActive)
+        {
+            if (sweepDirection == 0 || sweepDirection == 2)
+            {
+                sweepCurrentPos += sweepSpeed * deltaTime;
+                if (sweepCurrentPos >= 290.0f)
+                {
+                    sweepActive = false;
+                }
+            }
+            else
+            {
+                sweepCurrentPos -= sweepSpeed * deltaTime;
+                if (sweepCurrentPos <= -290.0f)
+                {
+                    sweepActive = false;
+                }
+            }
+
+            // Check collision against Kinger
+            if (sweepActive && !::myvirtualworld.kinger.animation.isDead)
+            {
+                bool hit = false;
+                float playerX = ::myvirtualworld.kinger.posX;
+                float playerY = ::myvirtualworld.kinger.posY;
+                float playerZ = ::myvirtualworld.kinger.posZ;
+                
+                float wallTopY = -18.7f + 12.0f; // wall sits on ground (-18.7) and has total height of 12.0 (panelHalfHeight is 6.0)
+                float hitThickness = 8.0f; // horizontal collision width of the sweeping plane
+
+                if (sweepDirection == 0 || sweepDirection == 1) // North-to-South or South-to-North
+                {
+                    if (std::abs(playerZ - sweepCurrentPos) <= hitThickness && playerY < wallTopY)
+                    {
+                        hit = true;
+                    }
+                }
+                else // East-to-West or West-to-East
+                {
+                    if (std::abs(playerX - sweepCurrentPos) <= hitThickness && playerY < wallTopY)
+                    {
+                        hit = true;
+                    }
+                }
+
+                if (hit)
+                {
+                    ::myvirtualworld.kinger.takeDamage(20); // Deal 20 damage (triggers hurt animation)
+                }
+            }
+        }
     }
     else
     {
         visualScaleFactor = 1.0f;
+    }
+
+    // Update active projectiles (unconditional)
+    float projectileSpeed = 150.0f;
+    for (int i = 0; i < MAX_CAINE_PROJECTILES; i++)
+    {
+        if (projectiles[i].active)
+        {
+            projectiles[i].posX += projectiles[i].dirX * projectileSpeed * deltaTime;
+            projectiles[i].posY += projectiles[i].dirY * projectileSpeed * deltaTime;
+            projectiles[i].posZ += projectiles[i].dirZ * projectileSpeed * deltaTime;
+            projectiles[i].lifeTimer += deltaTime;
+
+            // Deactivate if lifetime exceeded
+            if (projectiles[i].lifeTimer >= 3.0f)
+            {
+                projectiles[i].active = false;
+                continue;
+            }
+
+            // Check collision against Kinger
+            float kingerScale = ::myvirtualworld.kinger.uniformScale;
+            float radius = 3.0f * kingerScale;
+            float hitTolerance = 4.0f; // tolerance for thin line collision check
+
+            float dx = projectiles[i].posX - ::myvirtualworld.kinger.posX;
+            float dz = projectiles[i].posZ - ::myvirtualworld.kinger.posZ;
+            float distXZ = std::sqrt(dx * dx + dz * dz);
+
+            if (distXZ <= (radius + hitTolerance))
+            {
+                float kingerMinY = ::myvirtualworld.kinger.posY;
+                float kingerMaxY = ::myvirtualworld.kinger.posY + 22.0f * kingerScale;
+
+                if (projectiles[i].posY >= (kingerMinY - hitTolerance) && 
+                    projectiles[i].posY <= (kingerMaxY + hitTolerance))
+                {
+                    // Hit! Apply damage to Kinger
+                    ::myvirtualworld.kinger.takeDamage(10);
+                    projectiles[i].active = false;
+                }
+            }
+        }
+    }
+
+    // Update active teleport particles (unconditional)
+    for (int i = 0; i < MAX_TELEPORT_PARTICLES; i++)
+    {
+        if (teleportParticles[i].active)
+        {
+            teleportParticles[i].posX += teleportParticles[i].velX * deltaTime;
+            teleportParticles[i].posY += teleportParticles[i].velY * deltaTime;
+            teleportParticles[i].posZ += teleportParticles[i].velZ * deltaTime;
+            
+            // Add a bit of air resistance/drag
+            teleportParticles[i].velX *= 0.92f;
+            teleportParticles[i].velY *= 0.92f;
+            teleportParticles[i].velZ *= 0.92f;
+            
+            teleportParticles[i].lifeTime += deltaTime;
+            if (teleportParticles[i].lifeTime >= teleportParticles[i].maxLife)
+            {
+                teleportParticles[i].active = false;
+            }
+            else
+            {
+                // Fade out alpha
+                float progress = teleportParticles[i].lifeTime / teleportParticles[i].maxLife;
+                teleportParticles[i].alpha = 1.0f - progress;
+                
+                // Grow size slightly as they expand, then shrink
+                if (progress < 0.2f)
+                {
+                    teleportParticles[i].size += deltaTime * 8.0f;
+                }
+                else
+                {
+                    teleportParticles[i].size -= deltaTime * 4.0f;
+                    if (teleportParticles[i].size < 0.1f) teleportParticles[i].size = 0.1f;
+                }
+            }
+        }
     }
 }
 
@@ -330,6 +583,95 @@ Vec3 Caine::getCaineWorldCenter() const
     center.y = centerY;
     center.z = centerZ;
     return center;
+}
+
+void Caine::spawnProjectile()
+{
+    for (int i = 0; i < MAX_CAINE_PROJECTILES; i++)
+    {
+        if (!projectiles[i].active)
+        {
+            projectiles[i].active = true;
+            projectiles[i].lifeTimer = 0.0f;
+
+            // Spawn at Caine's center
+            Vec3 spawnPos = getCaineWorldCenter();
+            projectiles[i].posX = spawnPos.x;
+            projectiles[i].posY = spawnPos.y;
+            projectiles[i].posZ = spawnPos.z;
+
+            // Direction vector pointing to the player's chest (approx. posY + 11.0f)
+            float kingerScale = ::myvirtualworld.kinger.uniformScale;
+            float targetX = ::myvirtualworld.kinger.posX;
+            float targetY = ::myvirtualworld.kinger.posY + 11.0f * kingerScale;
+            float targetZ = ::myvirtualworld.kinger.posZ;
+
+            float dx = targetX - projectiles[i].posX;
+            float dy = targetY - projectiles[i].posY;
+            float dz = targetZ - projectiles[i].posZ;
+
+            float length = std::sqrt(dx * dx + dy * dy + dz * dz);
+            if (length > 0.1f)
+            {
+                projectiles[i].dirX = dx / length;
+                projectiles[i].dirY = dy / length;
+                projectiles[i].dirZ = dz / length;
+            }
+            else
+            {
+                projectiles[i].dirX = 0.0f;
+                projectiles[i].dirY = -1.0f;
+                projectiles[i].dirZ = 0.0f;
+            }
+            break;
+        }
+    }
+}
+
+void Caine::spawnTeleportPoof(float x, float y, float z)
+{
+    int spawned = 0;
+    for (int i = 0; i < MAX_TELEPORT_PARTICLES && spawned < 20; i++)
+    {
+        if (!teleportParticles[i].active)
+        {
+            teleportParticles[i].active = true;
+            teleportParticles[i].posX = x;
+            // Center the poof vertically on Caine
+            teleportParticles[i].posY = y + 11.0f; 
+            teleportParticles[i].posZ = z;
+            
+            // Random direction in a sphere
+            float theta = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * 3.14159265f;
+            float phi = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 3.14159265f;
+            float speed = 20.0f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 30.0f; // 20 to 50 units/sec
+            
+            teleportParticles[i].velX = speed * std::sin(phi) * std::cos(theta);
+            teleportParticles[i].velY = speed * std::cos(phi);
+            teleportParticles[i].velZ = speed * std::sin(phi) * std::sin(theta);
+            
+            // Glitch colors (cyan, magenta, yellow, white, red)
+            int colType = rand() % 5;
+            if (colType == 0) { // Cyan
+                teleportParticles[i].r = 0.0f; teleportParticles[i].g = 0.9f; teleportParticles[i].b = 1.0f;
+            } else if (colType == 1) { // Magenta / Pink
+                teleportParticles[i].r = 1.0f; teleportParticles[i].g = 0.1f; teleportParticles[i].b = 0.6f;
+            } else if (colType == 2) { // Yellow
+                teleportParticles[i].r = 1.0f; teleportParticles[i].g = 0.9f; teleportParticles[i].b = 0.0f;
+            } else if (colType == 3) { // Red
+                teleportParticles[i].r = 1.0f; teleportParticles[i].g = 0.1f; teleportParticles[i].b = 0.1f;
+            } else { // White
+                teleportParticles[i].r = 1.0f; teleportParticles[i].g = 1.0f; teleportParticles[i].b = 1.0f;
+            }
+            
+            teleportParticles[i].size = 2.0f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 4.0f; // size 2 to 6
+            teleportParticles[i].alpha = 1.0f;
+            teleportParticles[i].lifeTime = 0.0f;
+            teleportParticles[i].maxLife = 0.5f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 0.3f; // 0.5 to 0.8 seconds
+            
+            spawned++;
+        }
+    }
 }
 
 
@@ -1069,6 +1411,106 @@ void Caine::draw() const
         }
 
         glPopMatrix();
+    }
+
+    // Draw active projectiles in world space
+    for (int i = 0; i < MAX_CAINE_PROJECTILES; i++)
+    {
+        if (projectiles[i].active)
+        {
+            myvirtualworld.environment.drawThinGlitchLineEffect(
+                projectiles[i].posX, 
+                projectiles[i].posY, 
+                projectiles[i].posZ, 
+                35.0f, 
+                1.0f,
+                projectiles[i].dirX,
+                projectiles[i].dirY,
+                projectiles[i].dirZ
+            );
+        }
+    }
+
+    // Draw active teleport particles in world space
+    glPushAttrib(GL_LIGHTING_BIT | GL_ENABLE_BIT | GL_CURRENT_BIT);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    
+    for (int i = 0; i < MAX_TELEPORT_PARTICLES; i++)
+    {
+        if (teleportParticles[i].active)
+        {
+            glPushMatrix();
+            glTranslatef(teleportParticles[i].posX, teleportParticles[i].posY, teleportParticles[i].posZ);
+            
+            // Spin particles for a dynamic look
+            float spin = teleportParticles[i].lifeTime * 250.0f;
+            glRotatef(spin, 1.0f, 1.0f, 0.0f);
+            
+            glColor4f(teleportParticles[i].r, teleportParticles[i].g, teleportParticles[i].b, teleportParticles[i].alpha);
+            
+            // Draw a solid cube
+            float s = teleportParticles[i].size * 0.5f;
+            glBegin(GL_QUADS);
+                // Front
+                glVertex3f(-s, -s,  s); glVertex3f( s, -s,  s); glVertex3f( s,  s,  s); glVertex3f(-s,  s,  s);
+                // Back
+                glVertex3f(-s, -s, -s); glVertex3f(-s,  s, -s); glVertex3f( s,  s, -s); glVertex3f( s, -s, -s);
+                // Top
+                glVertex3f(-s,  s, -s); glVertex3f(-s,  s,  s); glVertex3f( s,  s,  s); glVertex3f( s,  s, -s);
+                // Bottom
+                glVertex3f(-s, -s, -s); glVertex3f( s, -s, -s); glVertex3f( s, -s,  s); glVertex3f(-s, -s,  s);
+                // Right
+                glVertex3f( s, -s, -s); glVertex3f( s,  s, -s); glVertex3f( s,  s,  s); glVertex3f( s, -s,  s);
+                // Left
+                glVertex3f(-s, -s, -s); glVertex3f(-s, -s,  s); glVertex3f(-s,  s,  s); glVertex3f(-s,  s, -s);
+            glEnd();
+            
+            glPopMatrix();
+        }
+    }
+    glPopAttrib();
+
+    // Draw active sweep wall
+    if (sweepActive)
+    {
+        float wallLength = 600.0f;
+        int numPanels = 15;
+        float step = wallLength / numPanels;
+        float panelHalfWidth = step * 0.5f;
+        float panelHalfHeight = 6.0f;
+        float yCenter = -18.7f + panelHalfHeight; // sits on ground
+        
+        float rotationAngle = (sweepDirection == 0 || sweepDirection == 1) ? 0.0f : 90.0f;
+        
+        for (int i = 0; i < numPanels; i++)
+        {
+            float offset = -wallLength * 0.5f + i * step + panelHalfWidth;
+            float px = 0.0f, py = yCenter, pz = 0.0f;
+            if (rotationAngle == 0.0f)
+            {
+                px = offset;
+                pz = sweepCurrentPos;
+            }
+            else
+            {
+                px = sweepCurrentPos;
+                pz = offset;
+            }
+            
+            float flicker = 0.5f + 0.5f * fabs(sin(myvirtualworld.environment.getAnimationTime() * 8.0f + i));
+            float uShift = sin(myvirtualworld.environment.getAnimationTime() * 4.0f + i) * 0.2f;
+            
+            myvirtualworld.environment.drawGlitchPanelEffect(
+                px, py, pz, 
+                panelHalfWidth, panelHalfHeight, 
+                uShift, 
+                flicker, 
+                rotationAngle
+            );
+        }
     }
 
     // Draw wireframe hitbox if showHitboxes is enabled

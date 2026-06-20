@@ -25,6 +25,15 @@ struct Gloink
     int health;         // Lives remaining for this Gloink
     bool isDead;        // Flag indicating if the Gloink is in a dead/collapsing state
     float deathTimer;   // Timer tracking the progress of the Minecraft-style death animation
+
+    bool isKnockedBack;
+    float knockbackTimer;
+    float knockbackDirX;
+    float knockbackDirZ;
+    bool isPaused;
+    float pauseTimer;
+
+    float groundLevel;  // Dynamic ground level base height for bouncing
 };
 
 /**
@@ -41,6 +50,11 @@ public:
      * Constructor that clears the collection of active Gloinks.
      */
     GloinksAnimation();
+    
+    float spawnTimer;
+    float spawnInterval;
+    int maxGloinks;
+    void spawnGloink();
 
     /**
      * Spawns the initial set of 6 Gloinks spaced out along the X axis.

@@ -62,6 +62,7 @@ namespace ProjectEnvironment
 
         // Environment Animation
         void tickTime();
+        float getAnimationTime() const { return animationTime; }
 
         // Texture Loading
         bool loadTextures();
@@ -89,10 +90,12 @@ namespace ProjectEnvironment
 
         // Glitch Animation
         void drawDigitalEffect() const;
+        void drawGlitchPanelEffect(float x = 0.0f, float y = 0.0f, float z = 0.0f, float width = 22.0f, float height = 8.0f, float uShift = 0.0f, float alpha = 1.0f, float rotationAngle = 0.0f) const;
+        void drawThinGlitchLineEffect(float x = 0.0f, float y = 0.0f, float z = 0.0f, float length = 35.0f, float alpha = 1.0f, float dirX = 1.0f, float dirY = 0.057f, float dirZ = 0.0f) const;
 
         // Bounding Box Collision
         bool checkWallCollision(float playerX, float playerZ, float radius, float& outNewX, float& outNewZ) const;
-        bool checkObstacleCollision(float playerX, float playerZ, float playerY, float radius, float& outNewX, float& outNewZ, float& outGroundY) const;
+        bool checkObstacleCollision(float playerX, float playerZ, float playerY, float radius, float& outNewX, float& outNewZ, float& outGroundY, bool isGloink = false) const;
         void getSkyBoxBounds(Vec3& minB, Vec3& maxB) const;
 
         //Main Draw Function

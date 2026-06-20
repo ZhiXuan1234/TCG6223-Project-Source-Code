@@ -2,7 +2,7 @@
  TCG6223 Computer Graphics
  FIST, Multimedia University
 
-  File: CNAworld.cpp (touched to trigger compilation update for Caine health, hit detection and scope fix)
+  File: CNAworld.cpp (touched to trigger compilation update for Caine teleport particles)
   Objective: show environment / World & declare model file path
 
  Reference code from:
@@ -503,11 +503,11 @@ void MyVirtualWorld::init()
     caine.posZ = -120.0f;
     
 
-    gloinks.initGloinks();
-
     isDebugMode = true;
     isCaineActive = true;
     isGloinksActive = true;
+
+    gloinks.initGloinks();
 
     //==================================================================
     // Notes: These two must put add the end of this function.
@@ -602,10 +602,13 @@ void MyVirtualWorld::startGame()
     // Execute reset game first
     resetGame();
 
-    // Start game spawns Caine, keeping Gloinks disabled
+    // Start game spawns Caine and enables Gloinks
     isCaineActive = true;
-    isGloinksActive = false;
+    isGloinksActive = true;
     isDebugMode = false;
+
+    // Spawn Gloinks dynamically
+    gloinks.initGloinks();
 }
 
 void MyVirtualWorld::debugEnvironment()

@@ -4,9 +4,11 @@
 #include <cmath>
 #include "Environment.hpp"
 #include "TextureLoader.hpp"
+#include "CNAWorld.hpp"
 
 using namespace ProjectEnvironment;
 
+extern ProjectWorld::MyVirtualWorld myvirtualworld;
 extern bool showHitboxes;
 extern float boundaryScale;
 
@@ -70,6 +72,18 @@ static void drawWireAABB(float minX, float maxX, float minY, float maxY, float m
         glVertex3f(maxX, minY, maxZ); glVertex3f(maxX, maxY, maxZ);
         glVertex3f(minX, minY, maxZ); glVertex3f(minX, maxY, maxZ);
     glEnd();
+}
+
+static void drawWireOBB(float tx, float ty, float tz, float scale, float rotateAngleDegrees, const Vec3& minB, const Vec3& maxB)
+{
+    glPushMatrix();
+    glTranslatef(tx, ty, tz);
+    if (std::abs(rotateAngleDegrees) > 0.001f)
+    {
+        glRotatef(rotateAngleDegrees, 0.0f, 1.0f, 0.0f);
+    }
+    drawWireAABB(minB.x * scale, maxB.x * scale, minB.y * scale, maxB.y * scale, minB.z * scale, maxB.z * scale);
+    glPopMatrix();
 }
 
 static void drawWireCylinder(float cx, float cz, float radius, float minY, float maxY, int segments = 24)
@@ -596,11 +610,29 @@ void Environment::drawIrregularCube() const
     irregularCubeModel.draw();
     glPopMatrix();
 
+    // Mirrored abstract prop 1 - CircusObject1 texture
+    glPushMatrix();
+    glBindTexture(GL_TEXTURE_2D, circusObject1Texture);
+    glTranslatef(42.0f, -18.7f, 0.0f);
+    glRotatef(180.0f, 0.0f, 1.0f, 0.0f);
+    glScalef(18.0f, 18.0f, 18.0f);
+    irregularCubeModel.draw();
+    glPopMatrix();
+
     // Abstract prop 2 - CircusObject2 texture
     glPushMatrix();
     glBindTexture(GL_TEXTURE_2D, circusObject2Texture);
     glTranslatef(-55.0f, -18.7f, 22.0f);
     glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
+    glScalef(12.0f, 12.0f, 12.0f);
+    irregularCubeModel.draw();
+    glPopMatrix();
+
+    // Mirrored abstract prop 2 - CircusObject2 texture
+    glPushMatrix();
+    glBindTexture(GL_TEXTURE_2D, circusObject2Texture);
+    glTranslatef(55.0f, -18.7f, -22.0f);
+    glRotatef(270.0f, 0.0f, 1.0f, 0.0f);
     glScalef(12.0f, 12.0f, 12.0f);
     irregularCubeModel.draw();
     glPopMatrix();
@@ -715,29 +747,61 @@ void Environment::drawSphere() const
     glEnable(GL_CULL_FACE);
 }
 
-void Environment::drawDigitalEffect() const
+void Environment::drawGlitchPanelEffect(float x, float y, float z, float width, float height, float uShift, float alpha, float rotationAngle) const
 {
-    // Save current lighting state
-    GLboolean lightingWasOn;
-    glGetBooleanv(GL_LIGHTING, &lightingWasOn);
-
-    // Glitch effect should look like glowing screen distortion
+    // Save current states
+    glPushAttrib(GL_LIGHTING_BIT | GL_ENABLE_BIT | GL_CURRENT_BIT | GL_DEPTH_BUFFER_BIT);
+    
     glDisable(GL_LIGHTING);
     glDisable(GL_CULL_FACE);
-
+    
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, glitchTexture);
-
-    // Additive blend makes bright glitch parts glow
+    
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-
-    // Do not let transparent glitch panels block the scene
+    
     glDepthMask(GL_FALSE);
-
-    // Make texture react to alpha/color
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    
+    glPushMatrix();
+    glColor4f(1.0f, 1.0f, 1.0f, alpha);
+    glTranslatef(x, y, z);
+    glRotatef(rotationAngle, 0.0f, 1.0f, 0.0f);
+    
+    drawGlitchPanel(width, height, uShift);
+    
+    glPopMatrix();
+    
+    glPopAttrib();
+}
 
+void Environment::drawThinGlitchLineEffect(float x, float y, float z, float length, float alpha, float dirX, float dirY, float dirZ) const
+{
+    // Save current states
+    glPushAttrib(GL_LIGHTING_BIT | GL_ENABLE_BIT | GL_CURRENT_BIT);
+    
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    
+    glLineWidth(2.0f);
+    glColor4f(0.0f, 0.9f, 1.0f, alpha);
+    
+    glBegin(GL_LINES);
+        glVertex3f(x - dirX * length * 0.5f, y - dirY * length * 0.5f, z - dirZ * length * 0.5f);
+        glVertex3f(x + dirX * length * 0.5f, y + dirY * length * 0.5f, z + dirZ * length * 0.5f);
+    glEnd();
+    
+    glLineWidth(1.0f);
+    
+    glPopAttrib();
+}
+
+void Environment::drawDigitalEffect() const
+{
     // =====================================================
     // Wider floating glitch panels across the environment
     // =====================================================
@@ -754,28 +818,15 @@ void Environment::drawDigitalEffect() const
 
         float width = 22.0f + (i % 2) * 12.0f;
         float height = 8.0f + (i % 3) * 4.0f;
+        
+        float rotationAngle = i * 35.0f + sin(animationTime + i) * 10.0f;
 
-        glPushMatrix();
-
-        glColor4f(1.0f, 1.0f, 1.0f, flicker);
-
-        glTranslatef(x, y, z);
-
-        // Make each panel face a slightly different direction
-        glRotatef(i * 35.0f + sin(animationTime + i) * 10.0f,
-                  0.0f, 1.0f, 0.0f);
-
-        drawGlitchPanel(width, height, uShift);
-
-        glPopMatrix();
+        drawGlitchPanelEffect(x, y, z, width, height, uShift, flicker, rotationAngle);
     }
 
     // =====================================================
     // More thin horizontal glitch scan lines
     // =====================================================
-    glDisable(GL_TEXTURE_2D);
-    glLineWidth(2.0f);
-
     for (int j = 0; j < 18; j++)
     {
         float x = -140.0f + (j % 6) * 55.0f;
@@ -785,29 +836,8 @@ void Environment::drawDigitalEffect() const
         float moveX = sin(animationTime * 2.0f + j) * 8.0f;
         float blink = fabs(sin(animationTime * 9.0f + j));
 
-        // Cyan-blue digital line
-        glColor4f(0.0f, 0.9f, 1.0f, blink * 0.55f);
-
-        glBegin(GL_LINES);
-            glVertex3f(x + moveX, y, z);
-            glVertex3f(x + moveX + 35.0f, y + 2.0f, z);
-        glEnd();
+        drawThinGlitchLineEffect(x + moveX, y, z, 35.0f, blink * 0.55f);
     }
-
-    glLineWidth(1.0f);
-
-    // Restore states
-    glDepthMask(GL_TRUE);
-    glDisable(GL_BLEND);
-    glDisable(GL_TEXTURE_2D);
-    glEnable(GL_CULL_FACE);
-
-    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-
-    if (lightingWasOn)
-        glEnable(GL_LIGHTING);
-    else
-        glDisable(GL_LIGHTING);
 }
 
 /////////////////////////////////////Main draw function//////////////////////////
@@ -883,7 +913,7 @@ void Environment::draw() const
         0.00003f
     );
 
-    //drawIrregularCube();
+    drawIrregularCube();
 
     disableLocalEnvironmentLight(GL_LIGHT1);
 
@@ -919,8 +949,11 @@ void Environment::draw() const
 
     disableLocalEnvironmentLight(GL_LIGHT1);
 
-    // Digital zap-zap circus effect
-    drawDigitalEffect();
+    // Digital zap-zap circus effect (only drawn in debug environment)
+    if (myvirtualworld.isDebugMode)
+    {
+        drawDigitalEffect();
+    }
 
     // Draw collision wireframes if toggled visible
     if (showHitboxes)
@@ -1036,17 +1069,11 @@ void Environment::draw() const
         {
             Vec3 minB, maxB;
             irregularCubeModel.getBounds(minB, maxB);
-            float hx = (maxB.x - minB.x) * 0.5f;
-            float hz = (maxB.z - minB.z) * 0.5f;
-            float localRadius = std::sqrt(hx * hx + hz * hz);
 
-            float ic1_x, ic1_z;
-            getTransformedCenter(irregularCubeModel, -42.0f, 0.0f, 18.0f, 0.0f, ic1_x, ic1_z);
-            drawWireCylinder(ic1_x, ic1_z, localRadius * 18.0f, -18.7f, 10.0f);
-
-            float ic2_x, ic2_z;
-            getTransformedCenter(irregularCubeModel, -55.0f, 22.0f, 12.0f, 90.0f, ic2_x, ic2_z);
-            drawWireCylinder(ic2_x, ic2_z, localRadius * 12.0f, -18.7f, 5.0f);
+            drawWireOBB(-42.0f, -18.7f, 0.0f, 18.0f, 0.0f, minB, maxB);
+            drawWireOBB(42.0f, -18.7f, 0.0f, 18.0f, 180.0f, minB, maxB);
+            drawWireOBB(-55.0f, -18.7f, 22.0f, 12.0f, 90.0f, minB, maxB);
+            drawWireOBB(55.0f, -18.7f, -22.0f, 12.0f, 270.0f, minB, maxB);
         }
 
         glPopAttrib();
@@ -1165,6 +1192,73 @@ static void getTransformedCenter(const ObjModel& model, float tx, float tz, floa
     }
 }
 
+static bool checkOBBCollision(
+    float playerX, float playerZ, float playerY, float radius,
+    float tx, float tz, float scale, float rotateAngleDegrees,
+    const Vec3& minB, const Vec3& maxB, float topY, float landingThreshold,
+    bool isGloink, float& outNewX, float& outNewZ, float& outGroundY
+) {
+    // 1. Transform world player coordinates to local space relative to (tx, tz) rotated by rotateAngleDegrees
+    float dx = playerX - tx;
+    float dz = playerZ - tz;
+    float rad = rotateAngleDegrees * 3.14159265f / 180.0f;
+    float lx = dx * std::cos(rad) - dz * std::sin(rad);
+    float lz = dx * std::sin(rad) + dz * std::cos(rad);
+
+    // 2. Define local AABB limits
+    float bMinX = minB.x * scale;
+    float bMaxX = maxB.x * scale;
+    float bMinZ = minB.z * scale;
+    float bMaxZ = maxB.z * scale;
+    if (bMinX > bMaxX) std::swap(bMinX, bMaxX);
+    if (bMinZ > bMaxZ) std::swap(bMinZ, bMaxZ);
+
+    // 3. Find closest point on local AABB
+    float cx = std::max(bMinX, std::min(lx, bMaxX));
+    float cz = std::max(bMinZ, std::min(lz, bMaxZ));
+
+    float ldx = lx - cx;
+    float ldz = lz - cz;
+    float dist = std::sqrt(ldx * ldx + ldz * ldz);
+
+    if (dist < radius)
+    {
+        if (isGloink || playerY >= topY - landingThreshold)
+        {
+            outGroundY = std::max(outGroundY, topY);
+            return false; // climbed, no horizontal resolution
+        }
+        else
+        {
+            float newLx = lx;
+            float newLz = lz;
+            if (dist > 0.00001f)
+            {
+                newLx = cx + (ldx / dist) * radius;
+                newLz = cz + (ldz / dist) * radius;
+            }
+            else
+            {
+                float distL = lx - bMinX;
+                float distR = bMaxX - lx;
+                float distB = lz - bMinZ;
+                float distT = bMaxZ - lz;
+                float minDist = std::min(std::min(distL, distR), std::min(distB, distT));
+                if (minDist == distL) newLx = bMinX - radius;
+                else if (minDist == distR) newLx = bMaxX + radius;
+                else if (minDist == distB) newLz = bMinZ - radius;
+                else newLz = bMaxZ + radius;
+            }
+            // Transform resolved local coordinates back to world space
+            float rrad = rotateAngleDegrees * 3.14159265f / 180.0f;
+            outNewX = tx + newLx * std::cos(rrad) + newLz * std::sin(rrad);
+            outNewZ = tz - newLx * std::sin(rrad) + newLz * std::cos(rrad);
+            return true; // collided and resolved
+        }
+    }
+    return false;
+}
+
 static bool resolveCircleCollision(float playerX, float playerZ, float playerRadius,
                                    float obstacleX, float obstacleZ, float obstacleRadius,
                                    float& outNewX, float& outNewZ)
@@ -1191,7 +1285,7 @@ static bool resolveCircleCollision(float playerX, float playerZ, float playerRad
     return false;
 }
 
-bool Environment::checkObstacleCollision(float playerX, float playerZ, float playerY, float radius, float& outNewX, float& outNewZ, float& outGroundY) const
+bool Environment::checkObstacleCollision(float playerX, float playerZ, float playerY, float radius, float& outNewX, float& outNewZ, float& outGroundY, bool isGloink) const
 {
     bool collided = false;
     outNewX = playerX;
@@ -1227,7 +1321,7 @@ bool Environment::checkObstacleCollision(float playerX, float playerZ, float pla
         float dist = std::sqrt(dx * dx + dz * dz);
         if (dist < radius + c1_rad)
         {
-            if (playerY >= c1_topY - landingThreshold)
+            if (!isGloink && playerY >= c1_topY - landingThreshold)
             {
                 outGroundY = std::max(outGroundY, c1_topY);
             }
@@ -1248,7 +1342,7 @@ bool Environment::checkObstacleCollision(float playerX, float playerZ, float pla
         dist = std::sqrt(dx * dx + dz * dz);
         if (dist < radius + c2_rad)
         {
-            if (playerY >= c2_topY - landingThreshold)
+            if (!isGloink && playerY >= c2_topY - landingThreshold)
             {
                 outGroundY = std::max(outGroundY, c2_topY);
             }
@@ -1269,7 +1363,7 @@ bool Environment::checkObstacleCollision(float playerX, float playerZ, float pla
         dist = std::sqrt(dx * dx + dz * dz);
         if (dist < radius + c3_rad)
         {
-            if (playerY >= c3_topY - landingThreshold)
+            if (!isGloink && playerY >= c3_topY - landingThreshold)
             {
                 outGroundY = std::max(outGroundY, c3_topY);
             }
@@ -1290,7 +1384,7 @@ bool Environment::checkObstacleCollision(float playerX, float playerZ, float pla
         dist = std::sqrt(dx * dx + dz * dz);
         if (dist < radius + c4_rad)
         {
-            if (playerY >= c4_topY - landingThreshold)
+            if (!isGloink && playerY >= c4_topY - landingThreshold)
             {
                 outGroundY = std::max(outGroundY, c4_topY);
             }
@@ -1321,7 +1415,7 @@ bool Environment::checkObstacleCollision(float playerX, float playerZ, float pla
         float dist = std::sqrt(dx * dx + dz * dz);
         if (dist < radius + pillarRad)
         {
-            if (playerY >= pillar_topY - landingThreshold)
+            if (!isGloink && playerY >= pillar_topY - landingThreshold)
             {
                 outGroundY = std::max(outGroundY, pillar_topY);
             }
@@ -1340,7 +1434,7 @@ bool Environment::checkObstacleCollision(float playerX, float playerZ, float pla
         dist = std::sqrt(dx * dx + dz * dz);
         if (dist < radius + pillarRad)
         {
-            if (playerY >= pillar_topY - landingThreshold)
+            if (!isGloink && playerY >= pillar_topY - landingThreshold)
             {
                 outGroundY = std::max(outGroundY, pillar_topY);
             }
@@ -1357,51 +1451,26 @@ bool Environment::checkObstacleCollision(float playerX, float playerZ, float pla
     {
         Vec3 minB, maxB;
         irregularCubeModel.getBounds(minB, maxB);
-        float hx = (maxB.x - minB.x) * 0.5f;
-        float hz = (maxB.z - minB.z) * 0.5f;
-        float localRadius = std::sqrt(hx * hx + hz * hz);
 
         // Abstract prop 1 - Scale 18.0f, Translate (-42.0f, -18.7f, 0.0f)
-        float ic1_x, ic1_z;
-        getTransformedCenter(irregularCubeModel, -42.0f, 0.0f, 18.0f, 0.0f, ic1_x, ic1_z);
-        float ic1_rad = localRadius * 18.0f;
         float ic1_topY = -18.7f + maxB.y * 18.0f;
-        float dx = outNewX - ic1_x;
-        float dz = outNewZ - ic1_z;
-        float dist = std::sqrt(dx * dx + dz * dz);
-        if (dist < radius + ic1_rad)
-        {
-            if (playerY >= ic1_topY - landingThreshold)
-            {
-                outGroundY = std::max(outGroundY, ic1_topY);
-            }
-            else
-            {
-                if (resolveCircleCollision(outNewX, outNewZ, radius, ic1_x, ic1_z, ic1_rad, outNewX, outNewZ))
-                    collided = true;
-            }
-        }
+        if (checkOBBCollision(outNewX, outNewZ, playerY, radius, -42.0f, 0.0f, 18.0f, 0.0f, minB, maxB, ic1_topY, landingThreshold, isGloink, outNewX, outNewZ, outGroundY))
+            collided = true;
+
+        // Mirrored Abstract prop 1 - Scale 18.0f, Translate (42.0f, -18.7f, 0.0f)
+        float ic3_topY = -18.7f + maxB.y * 18.0f;
+        if (checkOBBCollision(outNewX, outNewZ, playerY, radius, 42.0f, 0.0f, 18.0f, 180.0f, minB, maxB, ic3_topY, landingThreshold, isGloink, outNewX, outNewZ, outGroundY))
+            collided = true;
 
         // Abstract prop 2 - Scale 12.0f, Translate (-55.0f, -18.7f, 22.0f), Rotated 90.0
-        float ic2_x, ic2_z;
-        getTransformedCenter(irregularCubeModel, -55.0f, 22.0f, 12.0f, 90.0f, ic2_x, ic2_z);
-        float ic2_rad = localRadius * 12.0f;
         float ic2_topY = -18.7f + maxB.y * 12.0f;
-        dx = outNewX - ic2_x;
-        dz = outNewZ - ic2_z;
-        dist = std::sqrt(dx * dx + dz * dz);
-        if (dist < radius + ic2_rad)
-        {
-            if (playerY >= ic2_topY - landingThreshold)
-            {
-                outGroundY = std::max(outGroundY, ic2_topY);
-            }
-            else
-            {
-                if (resolveCircleCollision(outNewX, outNewZ, radius, ic2_x, ic2_z, ic2_rad, outNewX, outNewZ))
-                    collided = true;
-            }
-        }
+        if (checkOBBCollision(outNewX, outNewZ, playerY, radius, -55.0f, 22.0f, 12.0f, 90.0f, minB, maxB, ic2_topY, landingThreshold, isGloink, outNewX, outNewZ, outGroundY))
+            collided = true;
+
+        // Mirrored Abstract prop 2 - Scale 12.0f, Translate (55.0f, -18.7f, -22.0f), Rotated 90.0
+        float ic4_topY = -18.7f + maxB.y * 12.0f;
+        if (checkOBBCollision(outNewX, outNewZ, playerY, radius, 55.0f, -22.0f, 12.0f, 270.0f, minB, maxB, ic4_topY, landingThreshold, isGloink, outNewX, outNewZ, outGroundY))
+            collided = true;
     }
 
     return collided;
