@@ -101,6 +101,8 @@ Kinger::Kinger()
     currentLeanRoll  = 0.0f;
 
     velocityY = 0.0f;
+    knockbackVelX = 0.0f;
+    knockbackVelZ = 0.0f;
     isGrounded = true;
     jumpScaleY = 1.0f;
     uniformScale = 1.0f;
@@ -169,6 +171,8 @@ void Kinger::rebirth()
     posZ = 0.0f;
     facingYaw = 0.0f;
     velocityY = 0.0f;
+    knockbackVelX = 0.0f;
+    knockbackVelZ = 0.0f;
     isGrounded = true;
 
     // Reset animation death state
@@ -234,6 +238,14 @@ void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const b
     animation.updateHurtState(deltaTime);
 
     {
+        // Apply knockback velocity
+        posX += knockbackVelX * deltaTime;
+        posZ += knockbackVelZ * deltaTime;
+        knockbackVelX *= std::pow(0.1f, deltaTime);
+        knockbackVelZ *= std::pow(0.1f, deltaTime);
+        if (std::abs(knockbackVelX) < 0.01f) knockbackVelX = 0.0f;
+        if (std::abs(knockbackVelZ) < 0.01f) knockbackVelZ = 0.0f;
+
         float fwd = 0.0f;
         float rgt = 0.0f;
 

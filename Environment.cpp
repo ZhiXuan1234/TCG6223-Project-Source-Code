@@ -11,6 +11,9 @@ using namespace ProjectEnvironment;
 extern ProjectWorld::MyVirtualWorld myvirtualworld;
 extern bool showHitboxes;
 extern float boundaryScale;
+extern float screenShakeIntensity;
+extern float screenShakeTimer;
+extern bool isTestArena;
 
 static void getTransformedCenter(const ObjModel& model, float tx, float tz, float scale, float rotateAngleDegrees, float& outX, float& outZ);
 
@@ -172,6 +175,21 @@ Environment::Environment()
     // Animation Textures
     glitchTexture = 0;
 
+    // Initialize meteors (Sphere 1 to 5 original positions, scales, and bobs)
+    meteors[0] = { 0.0f, 130.0f, 20.0f, 0.0f, 130.0f, 20.0f, 0.0f,0.0f,0.0f, 0.0f,0.0f,0.0f, 8.0f, 0.0f, 5.0f, 0, 0.0f, 0.0f, 0.0f };
+    meteors[1] = { -60.0f, 110.0f, -40.0f, -60.0f, 110.0f, -40.0f, 0.0f,0.0f,0.0f, 0.0f,0.0f,0.0f, 8.0f, 1.2f, 4.0f, 0, 0.0f, 0.0f, 0.0f };
+    meteors[2] = { 80.0f, 120.0f, -100.0f, 80.0f, 120.0f, -100.0f, 0.0f,0.0f,0.0f, 0.0f,0.0f,0.0f, 8.0f, 2.4f, 6.0f, 0, 0.0f, 0.0f, 0.0f };
+    meteors[3] = { -90.0f, 140.0f, -160.0f, -90.0f, 140.0f, -160.0f, 0.0f,0.0f,0.0f, 0.0f,0.0f,0.0f, 8.0f, 3.6f, 5.0f, 0, 0.0f, 0.0f, 0.0f };
+    meteors[4] = { 90.0f, 150.0f, 40.0f, 90.0f, 150.0f, 40.0f, 0.0f,0.0f,0.0f, 0.0f,0.0f,0.0f, 8.0f, 4.8f, 4.0f, 0, 0.0f, 0.0f, 0.0f };
+
+    isMeteorModeActive = false;
+    meteorCooldownTimer = 0.0f;
+    nextMeteorInterval = 10.0f;
+
+    for (int i = 0; i < MAX_METEOR_PARTICLES; i++)
+    {
+        meteorParticles[i].active = false;
+    }
 }
 bool Environment::loadTextures()
 {
@@ -330,6 +348,10 @@ void Environment::tickTime() //Time-Based
     isPillarDrawn = false;
     isIrregularCubeDrawn = false;
     isCastleWallDrawn = false;
+
+    // Update meteors and their particles
+    updateMeteors(deltaTime);
+    updateMeteorParticles(deltaTime);
 }
 
 ////////////////////////////////////Draw////////////////////////////////////
@@ -691,60 +713,31 @@ void Environment::drawSphere() const
     // Use white so the texture color appears correctly
     glColor3ub(255, 255, 255);
 
-    //////////////////////////////Animation////////////////////////////
-    // Different floating values so spheres do not move together
-    float floatY1 = sin(animationTime) * 5.0f;
-    float floatY2 = sin(animationTime + 1.2f) * 4.0f;
-    float floatY3 = sin(animationTime + 2.4f) * 6.0f;
-    float floatY4 = sin(animationTime + 3.6f) * 5.0f;
-    float floatY5 = sin(animationTime + 4.8f) * 4.0f;
-    // Rotation value
     float rotateAngle = animationTime * 30.0f;
-    ////////////////////////////////////////////////////////////////////
 
-    // Main floating ball above center
-    glPushMatrix();
-    glTranslatef(-10.0f, 50.0f + floatY1, 10.0f);
-    glRotatef(rotateAngle, 0.0f, 1.0f, 0.0f);
-    glScalef(9.0f, 9.0f, 9.0f);
-    sphereModel.draw();
-    glPopMatrix();
+    for (int i = 0; i < NUM_METEORS; i++)
+    {
+        const Meteor& m = meteors[i];
+        if (m.state == 2) continue; // Impacted and hidden
 
-    // Floating ball left-back
-    glPushMatrix();
-    glTranslatef(-60.0f, 20.0f + floatY2, -45.0f);
-    glRotatef(rotateAngle * 0.8f, 0.0f, 1.0f, 0.0f);
-    glScalef(10.0f, 10.0f, 10.0f);
-    sphereModel.draw();
-    glPopMatrix();
-
-    // Floating ball front-left
-    glPushMatrix();
-    glTranslatef(-90.0f, 30.0f + floatY3, 90.0f);
-    glRotatef(rotateAngle * 0.6f, 0.0f, 1.0f, 0.0f);
-    glScalef(20.0f, 20.0f, 20.0f);
-    sphereModel.draw();
-    glPopMatrix();
-
-    // Floating ball right-back
-    glPushMatrix();
-    glTranslatef(75.0f, 35.0f + floatY4, -60.0f);
-    glRotatef(rotateAngle * 1.1f, 0.0f, 1.0f, 0.0f);
-    glScalef(15.0f, 15.0f, 15.0f);
-    sphereModel.draw();
-    glPopMatrix();
-
-    // Floating ball right-front
-    glPushMatrix();
-    glTranslatef(85.0f, 25.0f + floatY5, 100.0f);
-    glRotatef(rotateAngle * 0.9f, 0.0f, 1.0f, 0.0f);
-    glScalef(10.0f, 10.0f, 10.0f);
-    sphereModel.draw();
-    glPopMatrix();
+        glPushMatrix();
+        glTranslatef(m.currentX, m.currentY, m.currentZ);
+        
+        float scaleFactor = m.scale;
+        glRotatef(rotateAngle * (0.6f + (i * 0.1f)), 0.0f, 1.0f, 0.0f);
+        glScalef(scaleFactor, scaleFactor, scaleFactor);
+        glTranslatef(0.0f, -3.755225f, 0.0f); // Center the sphere geometry around local origin
+        
+        sphereModel.draw();
+        glPopMatrix();
+    }
 
     glDisable(GL_TEXTURE_2D);
     glDisable(GL_NORMALIZE);
     glEnable(GL_CULL_FACE);
+
+    // Draw active meteor trails and impact bursts
+    drawMeteorParticles();
 }
 
 void Environment::drawGlitchPanelEffect(float x, float y, float z, float width, float height, float uShift, float alpha, float rotationAngle) const
@@ -1485,4 +1478,347 @@ void Environment::getSkyBoxBounds(Vec3& minB, Vec3& maxB) const
         return;
     }
     skyBoxModel.getBounds(minB, maxB);
+}
+
+void Environment::resetMeteors()
+{
+    isMeteorModeActive = false;
+    meteorCooldownTimer = 0.0f;
+    nextMeteorInterval = 10.0f;
+    
+    for (int i = 0; i < NUM_METEORS; i++)
+    {
+        meteors[i].state = 0;
+        meteors[i].currentX = meteors[i].originalX;
+        meteors[i].currentY = meteors[i].originalY;
+        meteors[i].currentZ = meteors[i].originalZ;
+        meteors[i].fallProgress = 0.0f;
+        meteors[i].respawnTimer = 0.0f;
+    }
+
+    for (int i = 0; i < MAX_METEOR_PARTICLES; i++)
+    {
+        meteorParticles[i].active = false;
+    }
+}
+
+void Environment::updateMeteors(float deltaTime)
+{
+    if (!isMeteorModeActive || !isTestArena)
+    {
+        for (int i = 0; i < NUM_METEORS; i++)
+        {
+            meteors[i].state = 0;
+            meteors[i].currentX = meteors[i].originalX;
+            meteors[i].currentZ = meteors[i].originalZ;
+            float floatY = std::sin(animationTime + meteors[i].floatOffset) * meteors[i].floatAmplitude;
+            meteors[i].currentY = meteors[i].originalY + floatY;
+        }
+        return;
+    }
+
+    // Cooldown logic for launching meteors
+    meteorCooldownTimer -= deltaTime;
+    if (meteorCooldownTimer <= 0.0f)
+    {
+        meteorCooldownTimer = nextMeteorInterval;
+        // Cooldown randomized between 10 to 30 seconds
+        nextMeteorInterval = 10.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 20.0f);
+        
+        int numToLaunch = (rand() % 2 == 0) ? 1 : 2;
+        int launchedCount = 0;
+        
+        // Find meteors in state 0 (floating in sky)
+        std::vector<int> candidates;
+        for (int i = 0; i < NUM_METEORS; i++)
+        {
+            if (meteors[i].state == 0)
+            {
+                candidates.push_back(i);
+            }
+        }
+        
+        while (launchedCount < numToLaunch && !candidates.empty())
+        {
+            int randIdx = rand() % candidates.size();
+            int mIdx = candidates[randIdx];
+            candidates.erase(candidates.begin() + randIdx);
+            
+            meteors[mIdx].state = 1; // Falling
+            meteors[mIdx].startX = meteors[mIdx].currentX;
+            meteors[mIdx].startY = meteors[mIdx].currentY;
+            meteors[mIdx].startZ = meteors[mIdx].currentZ;
+            
+            // Target the player's last known ground position
+            meteors[mIdx].targetX = myvirtualworld.kinger.posX;
+            meteors[mIdx].targetY = -18.7f;
+            meteors[mIdx].targetZ = myvirtualworld.kinger.posZ;
+            
+            meteors[mIdx].fallProgress = 0.0f;
+            meteors[mIdx].fallDuration = 1.5f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 1.0f); // 1.5 to 2.5s
+            
+            launchedCount++;
+        }
+    }
+
+    // Update meteors positions and states
+    for (int i = 0; i < NUM_METEORS; i++)
+    {
+        Meteor& m = meteors[i];
+        if (m.state == 0)
+        {
+            m.currentX = m.originalX;
+            m.currentZ = m.originalZ;
+            float floatY = std::sin(animationTime + m.floatOffset) * m.floatAmplitude;
+            m.currentY = m.originalY + floatY;
+        }
+        else if (m.state == 1)
+        {
+            m.fallProgress += deltaTime / m.fallDuration;
+            if (m.fallProgress >= 1.0f)
+            {
+                m.fallProgress = 1.0f;
+                m.currentX = m.targetX;
+                m.currentY = m.targetY;
+                m.currentZ = m.targetZ;
+                
+                m.state = 2; // Impacted and hidden
+                m.respawnTimer = 5.0f;
+                
+                spawnMeteorBurst(m.currentX, m.currentY, m.currentZ);
+                
+                // Trigger camera screen shake
+                screenShakeTimer = 0.4f;
+                screenShakeIntensity = 4.0f;
+                
+                // Damage and knockback collision checks against Kinger
+                float dx = myvirtualworld.kinger.posX - m.currentX;
+                float dz = myvirtualworld.kinger.posZ - m.currentZ;
+                float dist = std::sqrt(dx * dx + dz * dz);
+                float radius = 30.0f;
+                
+                if (dist < radius)
+                {
+                    float kDirX = 0.0f;
+                    float kDirZ = 1.0f;
+                    if (dist > 0.1f)
+                    {
+                        kDirX = dx / dist;
+                        kDirZ = dz / dist;
+                    }
+                    
+                    // Knockback Kinger
+                    myvirtualworld.kinger.knockbackVelX = kDirX * 150.0f;
+                    myvirtualworld.kinger.knockbackVelZ = kDirZ * 150.0f;
+                    myvirtualworld.kinger.velocityY = 30.0f;
+                    myvirtualworld.kinger.isGrounded = false;
+                    
+                    myvirtualworld.kinger.takeDamage(40);
+                }
+            }
+            else
+            {
+                m.currentX = m.startX + (m.targetX - m.startX) * m.fallProgress;
+                m.currentY = m.startY + (m.targetY - m.startY) * m.fallProgress;
+                m.currentZ = m.startZ + (m.targetZ - m.startZ) * m.fallProgress;
+                
+                spawnMeteorTrailParticle(m.currentX, m.currentY, m.currentZ, m.scale);
+            }
+        }
+        else if (m.state == 2)
+        {
+            m.respawnTimer -= deltaTime;
+            if (m.respawnTimer <= 0.0f)
+            {
+                m.state = 0;
+                m.currentX = m.originalX;
+                m.currentY = m.originalY;
+                m.currentZ = m.originalZ;
+                m.fallProgress = 0.0f;
+                
+                spawnMeteorPoof(m.currentX, m.currentY, m.currentZ);
+            }
+        }
+    }
+}
+
+void Environment::spawnMeteorTrailParticle(float x, float y, float z, float sizeFactor)
+{
+    int spawned = 0;
+    for (int i = 0; i < MAX_METEOR_PARTICLES && spawned < 2; i++)
+    {
+        if (!meteorParticles[i].active)
+        {
+            meteorParticles[i].active = true;
+            meteorParticles[i].posX = x + (-2.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 4.0f));
+            meteorParticles[i].posY = y + (-2.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 4.0f));
+            meteorParticles[i].posZ = z + (-2.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 4.0f));
+            
+            meteorParticles[i].velX = -3.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 6.0f);
+            meteorParticles[i].velY = 2.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 5.0f);
+            meteorParticles[i].velZ = -3.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 6.0f);
+            
+            meteorParticles[i].size = (sizeFactor * 0.1f) + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / (sizeFactor * 0.15f));
+            
+            meteorParticles[i].r = 1.0f;
+            meteorParticles[i].g = 0.3f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 0.5f);
+            meteorParticles[i].b = 0.0f;
+            
+            meteorParticles[i].alpha = 1.0f;
+            meteorParticles[i].lifeTime = 0.0f;
+            meteorParticles[i].maxLife = 0.5f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 0.5f);
+            
+            spawned++;
+        }
+    }
+}
+
+void Environment::spawnMeteorBurst(float x, float y, float z)
+{
+    int spawned = 0;
+    for (int i = 0; i < MAX_METEOR_PARTICLES && spawned < 50; i++)
+    {
+        if (!meteorParticles[i].active)
+        {
+            meteorParticles[i].active = true;
+            meteorParticles[i].posX = x;
+            meteorParticles[i].posY = y + 1.0f;
+            meteorParticles[i].posZ = z;
+            
+            float theta = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * 3.14159265f;
+            float phi = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 1.5707963f;
+            float speed = 30.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 50.0f);
+            
+            meteorParticles[i].velX = speed * std::sin(phi) * std::cos(theta);
+            meteorParticles[i].velY = speed * std::cos(phi);
+            meteorParticles[i].velZ = speed * std::sin(phi) * std::sin(theta);
+            
+            meteorParticles[i].size = 1.5f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 3.5f);
+            
+            int type = rand() % 3;
+            if (type == 0) {
+                meteorParticles[i].r = 1.0f; meteorParticles[i].g = 0.5f; meteorParticles[i].b = 0.0f;
+            } else if (type == 1) {
+                meteorParticles[i].r = 1.0f; meteorParticles[i].g = 0.1f; meteorParticles[i].b = 0.1f;
+            } else {
+                meteorParticles[i].r = 1.0f; meteorParticles[i].g = 0.8f; meteorParticles[i].b = 0.0f;
+            }
+            
+            meteorParticles[i].alpha = 1.0f;
+            meteorParticles[i].lifeTime = 0.0f;
+            meteorParticles[i].maxLife = 0.6f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 0.8f);
+            
+            spawned++;
+        }
+    }
+}
+
+void Environment::spawnMeteorPoof(float x, float y, float z)
+{
+    int spawned = 0;
+    for (int i = 0; i < MAX_METEOR_PARTICLES && spawned < 15; i++)
+    {
+        if (!meteorParticles[i].active)
+        {
+            meteorParticles[i].active = true;
+            meteorParticles[i].posX = x;
+            meteorParticles[i].posY = y;
+            meteorParticles[i].posZ = z;
+            
+            float theta = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * 3.14159265f;
+            float phi = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 3.14159265f;
+            float speed = 10.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 20.0f);
+            
+            meteorParticles[i].velX = speed * std::sin(phi) * std::cos(theta);
+            meteorParticles[i].velY = speed * std::cos(phi);
+            meteorParticles[i].velZ = speed * std::sin(phi) * std::sin(theta);
+            
+            meteorParticles[i].size = 1.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 3.0f);
+            
+            int colType = rand() % 3;
+            if (colType == 0) {
+                meteorParticles[i].r = 0.0f; meteorParticles[i].g = 0.9f; meteorParticles[i].b = 1.0f;
+            } else if (colType == 1) {
+                meteorParticles[i].r = 1.0f; meteorParticles[i].g = 0.1f; meteorParticles[i].b = 0.6f;
+            } else {
+                meteorParticles[i].r = 1.0f; meteorParticles[i].g = 1.0f; meteorParticles[i].b = 1.0f;
+            }
+            
+            meteorParticles[i].alpha = 1.0f;
+            meteorParticles[i].lifeTime = 0.0f;
+            meteorParticles[i].maxLife = 0.4f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 0.4f);
+            
+            spawned++;
+        }
+    }
+}
+
+void Environment::updateMeteorParticles(float deltaTime)
+{
+    for (int i = 0; i < MAX_METEOR_PARTICLES; i++)
+    {
+        if (meteorParticles[i].active)
+        {
+            meteorParticles[i].posX += meteorParticles[i].velX * deltaTime;
+            meteorParticles[i].posY += meteorParticles[i].velY * deltaTime;
+            meteorParticles[i].posZ += meteorParticles[i].velZ * deltaTime;
+            
+            meteorParticles[i].velX *= 0.95f;
+            meteorParticles[i].velY *= 0.95f;
+            meteorParticles[i].velZ *= 0.95f;
+            
+            meteorParticles[i].lifeTime += deltaTime;
+            if (meteorParticles[i].lifeTime >= meteorParticles[i].maxLife)
+            {
+                meteorParticles[i].active = false;
+            }
+            else
+            {
+                meteorParticles[i].alpha = 1.0f - (meteorParticles[i].lifeTime / meteorParticles[i].maxLife);
+            }
+        }
+    }
+}
+
+void Environment::drawMeteorParticles() const
+{
+    glPushAttrib(GL_LIGHTING_BIT | GL_ENABLE_BIT | GL_CURRENT_BIT);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    
+    for (int i = 0; i < MAX_METEOR_PARTICLES; i++)
+    {
+        const MeteorParticle& p = meteorParticles[i];
+        if (p.active)
+        {
+            glPushMatrix();
+            glTranslatef(p.posX, p.posY, p.posZ);
+            
+            float spin = p.lifeTime * 250.0f;
+            glRotatef(spin, 1.0f, 1.0f, 0.0f);
+            
+            glColor4f(p.r, p.g, p.b, p.alpha);
+            
+            float s = p.size * 0.5f;
+            glBegin(GL_QUADS);
+                // Front
+                glVertex3f(-s, -s,  s); glVertex3f( s, -s,  s); glVertex3f( s,  s,  s); glVertex3f(-s,  s,  s);
+                // Back
+                glVertex3f(-s, -s, -s); glVertex3f(-s,  s, -s); glVertex3f( s,  s, -s); glVertex3f( s, -s, -s);
+                // Top
+                glVertex3f(-s,  s, -s); glVertex3f(-s,  s,  s); glVertex3f( s,  s,  s); glVertex3f( s,  s, -s);
+                // Bottom
+                glVertex3f(-s, -s, -s); glVertex3f( s, -s, -s); glVertex3f( s, -s,  s); glVertex3f(-s, -s,  s);
+                // Right
+                glVertex3f( s, -s, -s); glVertex3f( s,  s, -s); glVertex3f( s,  s,  s); glVertex3f( s, -s,  s);
+                // Left
+                glVertex3f(-s, -s, -s); glVertex3f(-s, -s,  s); glVertex3f(-s,  s,  s); glVertex3f(-s,  s, -s);
+            glEnd();
+            
+            glPopMatrix();
+        }
+    }
+    glPopAttrib();
 }

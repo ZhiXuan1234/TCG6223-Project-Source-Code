@@ -115,14 +115,14 @@ Caine::Caine(bool isClone)
 
     if (!isClone)
     {
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < MAX_CLONES; i++)
         {
             clones[i] = new Caine(true);
         }
     }
     else
     {
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < MAX_CLONES; i++)
         {
             clones[i] = nullptr;
         }
@@ -133,7 +133,7 @@ Caine::~Caine()
 {
     if (!isClone)
     {
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < MAX_CLONES; i++)
         {
             delete clones[i];
             clones[i] = nullptr;
@@ -252,7 +252,7 @@ void Caine::resetAI()
 
     if (!isClone)
     {
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < MAX_CLONES; i++)
         {
             if (clones[i])
             {
@@ -305,24 +305,24 @@ void Caine::update(float deltaTime)
                     teleportParticles[i].active = false;
                 }
 
-                float spotsX[5];
-                float spotsZ[5];
-                float spotsY[5];
-                for (int j = 0; j < 5; j++)
+                float spotsX[MAX_CLONES + 1];
+                float spotsZ[MAX_CLONES + 1];
+                float spotsY[MAX_CLONES + 1];
+                for (int j = 0; j < MAX_CLONES + 1; j++)
                 {
                     spotsX[j] = -100.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 200.0f);
                     spotsZ[j] = -180.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 230.0f);
                     spotsY[j] = CAINE_HOVER_HEIGHT_Y + (-5.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 10.0f));
                 }
 
-                int realSpot = rand() % 5;
+                int realSpot = rand() % (MAX_CLONES + 1);
                 posX = spotsX[realSpot];
                 posY = spotsY[realSpot];
                 posZ = spotsZ[realSpot];
                 spawnTeleportPoof(posX, posY, posZ);
 
                 int cloneIdx = 0;
-                for (int j = 0; j < 5; j++)
+                for (int j = 0; j < MAX_CLONES + 1; j++)
                 {
                     if (j == realSpot) continue;
                     Caine* clone = clones[cloneIdx++];
@@ -356,7 +356,7 @@ void Caine::update(float deltaTime)
         }
         else if (doctorStrangeState == 2)
         {
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < MAX_CLONES; i++)
             {
                 if (clones[i])
                 {
@@ -869,7 +869,7 @@ void Caine::takeDamage(int amount)
 
     if (isTestArena && !isClone && doctorStrangeState == 2)
     {
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < MAX_CLONES; i++)
         {
             if (clones[i])
             {
@@ -1920,7 +1920,7 @@ void Caine::draw() const
 
     if (isTestArena && !isClone && doctorStrangeState == 2)
     {
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < MAX_CLONES; i++)
         {
             if (clones[i])
             {

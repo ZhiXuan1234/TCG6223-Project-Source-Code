@@ -259,7 +259,7 @@ void KingerAnimation::updateSkillState(float deltaTime, float currentYaw, float 
                 // If in Doctor Strange phase 2, check clones first!
                 if (::myvirtualworld.caine.doctorStrangeState == 2)
                 {
-                    for (int i = 0; i < 4; i++)
+                    for (int i = 0; i < ProjectCaine::Caine::MAX_CLONES; i++)
                     {
                         ProjectCaine::Caine* clone = ::myvirtualworld.caine.clones[i];
                         if (clone && !clone->animation.isDead)

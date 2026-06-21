@@ -223,7 +223,8 @@ public:
 
     // Doctor Strange clone move variables
     bool isClone;
-    Caine* clones[4];
+    static const int MAX_CLONES = 4;
+    Caine* clones[MAX_CLONES];
     int doctorStrangeState; // 0=normal, 1=disappeared, 2=emergence, 3=stunned
     float doctorStrangeTimer;
     float particleSpawnTimer;

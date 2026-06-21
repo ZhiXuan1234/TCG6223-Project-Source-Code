@@ -135,6 +135,8 @@ GameUIState currentUIState = START_MENU;
 bool isWinDelayed = false;
 float winDelayTimer = 0.0f;
 bool isTestArena = false;
+float screenShakeTimer = 0.0f;
+float screenShakeIntensity = 0.0f;
 
 static void drawCenteredString(void* font, const char* str, float y, float left, float right);
 
@@ -363,7 +365,7 @@ void drawHUD()
         float taLeft = 30.0f;
         float taTop = window.height - 30.0f;
         float taWidth = 250.0f;
-        float taHeight = 95.0f;
+        float taHeight = 115.0f;
         float taRight = taLeft + taWidth;
         float taBottom = taTop - taHeight;
 
@@ -409,6 +411,10 @@ void drawHUD()
         // Key 4
         glColor4f(0.0f, 0.9f, 0.5f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "[4]", taLeft + 12.0f, taStartY - 3.0f * taSpacing);
         glColor4f(0.9f, 0.9f, 0.9f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "Doctor Strange Clones Move", taLeft + 40.0f, taStartY - 3.0f * taSpacing);
+
+        // Key 5
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "[5]", taLeft + 12.0f, taStartY - 4.0f * taSpacing);
+        glColor4f(0.9f, 0.9f, 0.9f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "Meteor Attack Move", taLeft + 40.0f, taStartY - 4.0f * taSpacing);
     }
 
     // ==========================================
@@ -1182,13 +1188,23 @@ void myDisplayFunc(void)
      currentCameraDirZ = -std::cos(cameraYaw) * std::cos(cameraPitch);
  }
 
- glMatrixMode(GL_MODELVIEW);
- glLoadIdentity();
- gluLookAt(
-     eyeX,    eyeY,        eyeZ,
-     targetX, baseTargetY, targetZ, 
-     0.0f,    1.0f,        0.0f 
- );
+  float shakeX = 0.0f;
+  float shakeY = 0.0f;
+  float shakeZ = 0.0f;
+  if (screenShakeTimer > 0.0f)
+  {
+      shakeX = (-1.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 2.0f)) * screenShakeIntensity;
+      shakeY = (-1.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 2.0f)) * screenShakeIntensity;
+      shakeZ = (-1.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 2.0f)) * screenShakeIntensity;
+  }
+
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
+  gluLookAt(
+      eyeX + shakeX,    eyeY + shakeY,        eyeZ + shakeZ,
+      targetX + shakeX, baseTargetY + shakeY, targetZ + shakeZ, 
+      0.0f,    1.0f,        0.0f 
+  );
 
  glPushMatrix();
 
@@ -1395,6 +1411,7 @@ void myKeyboardFunc(unsigned char key, int x, int y)
       case '1':
           if (isTestArena)
           {
+              myvirtualworld.environment.resetMeteors();
               myvirtualworld.isCaineActive = true;
               myvirtualworld.isGloinksActive = false;
               myvirtualworld.gloinks.animation.activeGloinks.clear();
@@ -1413,6 +1430,7 @@ void myKeyboardFunc(unsigned char key, int x, int y)
       case '2':
           if (isTestArena)
           {
+              myvirtualworld.environment.resetMeteors();
               myvirtualworld.isCaineActive = true;
               myvirtualworld.isGloinksActive = false;
               myvirtualworld.gloinks.animation.activeGloinks.clear();
@@ -1436,6 +1454,7 @@ void myKeyboardFunc(unsigned char key, int x, int y)
       case '3':
           if (isTestArena)
           {
+              myvirtualworld.environment.resetMeteors();
               myvirtualworld.isCaineActive = false;
               myvirtualworld.isGloinksActive = true;
               myvirtualworld.gloinks.animation.activeGloinks.clear();
@@ -1454,6 +1473,7 @@ void myKeyboardFunc(unsigned char key, int x, int y)
       case '4':
           if (isTestArena)
           {
+              myvirtualworld.environment.resetMeteors();
               myvirtualworld.isCaineActive = true;
               myvirtualworld.isGloinksActive = false;
               myvirtualworld.gloinks.animation.activeGloinks.clear();
@@ -1480,9 +1500,32 @@ void myKeyboardFunc(unsigned char key, int x, int y)
           }
           else if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(3);
           break;
-     case '5':
-         if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(4);
-         break;
+      case '5':
+          if (isTestArena)
+          {
+              myvirtualworld.isCaineActive = true;
+              myvirtualworld.isGloinksActive = false;
+              myvirtualworld.gloinks.animation.activeGloinks.clear();
+              myvirtualworld.caine.animation.isLayingDown = false;
+              myvirtualworld.caine.animation.layDownFactor = 0.0f;
+              myvirtualworld.caine.sweepActive = false;
+              myvirtualworld.caine.animation.isLaughing = false;
+              myvirtualworld.caine.currentHealth = myvirtualworld.caine.maxHealth;
+              myvirtualworld.caine.animation.isDead = false;
+              myvirtualworld.caine.animation.deathTimer = 0.0f;
+              myvirtualworld.caine.testArenaSweepMode = false;
+              myvirtualworld.caine.doctorStrangeState = 0;
+              
+              // Clear active Caine projectiles
+              for (int i = 0; i < myvirtualworld.caine.MAX_CAINE_PROJECTILES; i++)
+              {
+                  myvirtualworld.caine.projectiles[i].active = false;
+              }
+              
+              myvirtualworld.environment.isMeteorModeActive = true;
+          }
+          else if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(4);
+          break;
      case '6':
          if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(5);
          break;
