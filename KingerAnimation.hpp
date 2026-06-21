@@ -63,7 +63,7 @@ public:
 
     // Ammo & Reload State Variables
     int currentAmmo;        // Current ammo count left in the gun
-    static const int MAX_AMMO = 30; // Max ammo capacity
+    static const int MAX_AMMO = 5; // Max ammo capacity
     
     bool isReloading;       // Flag indicating if the reload animation is active
     float reloadTimer;      // Timer tracking reload progress

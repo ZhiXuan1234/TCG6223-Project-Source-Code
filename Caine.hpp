@@ -211,6 +211,12 @@ public:
     float sweepTimer;
     float sweepInterval;
     bool wasLayingDown;
+
+    // Phase transition variables
+    int currentPhase;
+    bool isTransitioning;
+    float transitionTimer;
+    float transitionDuration;
 };
 
 } // namespace ProjectCaine

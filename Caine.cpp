@@ -61,6 +61,10 @@ Caine::Caine()
     facingYaw = 0.0f;
     currentHealth = 5;
     maxHealth = 5;
+    currentPhase = 1;
+    isTransitioning = false;
+    transitionTimer = 0.0f;
+    transitionDuration = 8.0f;
 
     shootCooldownTimer = 0.0f;
     shootInterval = 1.0f;
@@ -138,6 +142,9 @@ void Caine::resetAI()
     animation.isShootingState = false;
 
     currentHealth = maxHealth;
+    currentPhase = 1;
+    isTransitioning = false;
+    transitionTimer = 0.0f;
 
     shootCooldownTimer = 0.0f;
     for (int i = 0; i < MAX_CAINE_PROJECTILES; i++)
@@ -178,15 +185,20 @@ void Caine::update(float deltaTime)
         // Automatically respawn/reanimate Caine after exactly 2 seconds
         if (animation.deathTimer >= 2.0f)
         {
-            animation.isDead = false;
-            animation.deathTimer = 0.0f;
-            currentHealth = maxHealth;
-
-            if (spawnPositionSaved)
+            if (::myvirtualworld.isDebugMode)
             {
-                posX = spawnX;
-                posY = spawnY;
-                posZ = spawnZ;
+                animation.isDead = false;
+                animation.deathTimer = 0.0f;
+                currentHealth = maxHealth;
+                currentPhase = 1;
+                isTransitioning = false;
+
+                if (spawnPositionSaved)
+                {
+                    posX = spawnX;
+                    posY = spawnY;
+                    posZ = spawnZ;
+                }
             }
         }
     }
@@ -200,8 +212,87 @@ void Caine::update(float deltaTime)
 
     if (!::myvirtualworld.isDebugMode && !animation.isDead)
     {
-        // 1. Maintain a constant height level of 2x the player model's height above the ground plane
-        float targetY = CAINE_HOVER_HEIGHT_Y;
+        if (isTransitioning)
+        {
+            transitionTimer += deltaTime;
+            if (transitionTimer >= transitionDuration)
+            {
+                isTransitioning = false;
+                transitionTimer = 0.0f;
+                currentHealth = maxHealth;
+                animation.isLeaningForward = false;
+                aiTeleportTimer = 0.0f;
+                shootCooldownTimer = 0.0f;
+            }
+            else
+            {
+                // Heal slowly over the last 5 seconds (from 3.0s to 8.0s)
+                if (transitionTimer > 3.0f)
+                {
+                    float t_heal = (transitionTimer - 3.0f) / 5.0f;
+                    if (t_heal > 1.0f) t_heal = 1.0f;
+                    currentHealth = (int)(t_heal * maxHealth);
+
+                    // Spawn healing particles floats upwards
+                    int spawnedThisFrame = 0;
+                    for (int j = 0; j < MAX_TELEPORT_PARTICLES && spawnedThisFrame < 2; j++)
+                    {
+                        if (!teleportParticles[j].active)
+                        {
+                            teleportParticles[j].active = true;
+                            // Spawn offset in a cylinder around Caine
+                            float radius = 5.0f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 10.0f;
+                            float angle = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * 3.14159265f;
+                            teleportParticles[j].posX = posX + radius * std::cos(angle);
+                            teleportParticles[j].posY = posY - 22.0f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 15.0f;
+                            teleportParticles[j].posZ = posZ + radius * std::sin(angle);
+
+                            // Float upwards slowly
+                            teleportParticles[j].velX = -5.0f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 10.0f;
+                            teleportParticles[j].velY = 15.0f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 15.0f;
+                            teleportParticles[j].velZ = -5.0f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 10.0f;
+
+                            // Color matches the active phase health bar color!
+                            if (currentPhase == 2) // Phase 2: Orange/Yellow
+                            {
+                                if (rand() % 2 == 0) {
+                                    teleportParticles[j].r = 1.0f; teleportParticles[j].g = 0.5f; teleportParticles[j].b = 0.0f;
+                                } else {
+                                    teleportParticles[j].r = 1.0f; teleportParticles[j].g = 0.8f; teleportParticles[j].b = 0.0f;
+                                }
+                            }
+                            else if (currentPhase == 3) // Phase 3: Crimson/Red
+                            {
+                                if (rand() % 2 == 0) {
+                                    teleportParticles[j].r = 1.0f; teleportParticles[j].g = 0.0f; teleportParticles[j].b = 0.1f;
+                                } else {
+                                    teleportParticles[j].r = 0.8f; teleportParticles[j].g = 0.1f; teleportParticles[j].b = 0.2f;
+                                }
+                            }
+                            else
+                            {
+                                teleportParticles[j].r = 1.0f; teleportParticles[j].g = 1.0f; teleportParticles[j].b = 1.0f;
+                            }
+
+                            teleportParticles[j].size = 1.5f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 3.0f;
+                            teleportParticles[j].alpha = 1.0f;
+                            teleportParticles[j].lifeTime = 0.0f;
+                            teleportParticles[j].maxLife = 0.6f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 0.4f;
+
+                            spawnedThisFrame++;
+                        }
+                    }
+                }
+                else
+                {
+                    currentHealth = 0;
+                }
+            }
+        }
+        else
+        {
+            // 1. Maintain a constant height level of 2x the player model's height above the ground plane
+            float targetY = CAINE_HOVER_HEIGHT_Y;
         posY += (targetY - posY) * 3.0f * deltaTime;
 
         // 2. Face the player at all times
@@ -417,6 +508,7 @@ void Caine::update(float deltaTime)
                 }
             }
         }
+        }
     }
     else
     {
@@ -543,13 +635,35 @@ void Caine::setScale(float scale)
 
 void Caine::takeDamage(int amount)
 {
+    if (isTransitioning) return; // Invincible during transition state!
     if (animation.isHurt || animation.isDead) return;
 
     currentHealth -= amount;
     if (currentHealth <= 0)
     {
         currentHealth = 0;
-        triggerDeath();
+        if (currentPhase < 3)
+        {
+            currentPhase++;
+            isTransitioning = true;
+            transitionTimer = 0.0f;
+
+            // Clear other animation/AI states to lean forward cleanly
+            animation.isLeaningForward = true;
+            animation.isLayingDown = false;
+            animation.layDownFactor = 0.0f;
+            animation.isShootingState = false;
+            animation.shootingTimer = 0.0f;
+            animation.isLaughing = false;
+            isTeleporting = false;
+            isAppearing = false;
+            visualScaleFactor = 1.0f;
+            sweepActive = false;
+        }
+        else
+        {
+            triggerDeath();
+        }
     }
     else
     {

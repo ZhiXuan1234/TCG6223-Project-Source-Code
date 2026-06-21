@@ -105,20 +105,27 @@ void GloinksAnimation::updateGloinks(float deltaTime)
     // Spawning: only in gameplay mode (not debug mode)
     if (!::myvirtualworld.isDebugMode)
     {
-        int aliveCount = 0;
-        for (const auto& g : activeGloinks)
+        if (::myvirtualworld.isCaineActive && ::myvirtualworld.caine.animation.isDead && ::myvirtualworld.caine.currentPhase == 3)
         {
-            if (!g.isDead) aliveCount++;
+            activeGloinks.clear();
         }
-
-        if (aliveCount < maxGloinks)
+        else
         {
-            spawnTimer += deltaTime;
-            if (spawnTimer >= spawnInterval)
+            int aliveCount = 0;
+            for (const auto& g : activeGloinks)
             {
-                spawnGloink();
-                spawnTimer = 0.0f;
-                spawnInterval = 2.0f + static_cast<float>(std::rand()) / (static_cast<float>(RAND_MAX / 1.0f));
+                if (!g.isDead) aliveCount++;
+            }
+
+            if (aliveCount < maxGloinks)
+            {
+                spawnTimer += deltaTime;
+                if (spawnTimer >= spawnInterval)
+                {
+                    spawnGloink();
+                    spawnTimer = 0.0f;
+                    spawnInterval = 2.0f + static_cast<float>(std::rand()) / (static_cast<float>(RAND_MAX / 1.0f));
+                }
             }
         }
     }

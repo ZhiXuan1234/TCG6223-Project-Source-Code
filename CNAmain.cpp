@@ -130,12 +130,21 @@ float currentCameraDirY = 0.0f;
 float currentCameraDirZ = 0.0f;
 
 bool showHitboxes = false; // Toggle to render green hitboxes around active Gloinks
-enum GameUIState { START_MENU, GAMEPLAY, PAUSE_MENU };
+enum GameUIState { START_MENU, GAMEPLAY, PAUSE_MENU, DEATH_SCREEN, WIN_SCREEN };
 GameUIState currentUIState = START_MENU;
+bool isWinDelayed = false;
+float winDelayTimer = 0.0f;
+
+static void drawCenteredString(void* font, const char* str, float y, float left, float right);
 
 void drawCrosshair()
 {
+    glPushAttrib(GL_LIGHTING_BIT | GL_ENABLE_BIT | GL_CURRENT_BIT | GL_COLOR_BUFFER_BIT);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
     glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
@@ -150,7 +159,7 @@ void drawCrosshair()
     float cy = window.height / 2.0f;
     float size = 10.0f;
 
-    glColor3f(1.0f, 1.0f, 1.0f);
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     glBegin(GL_LINES);
         glVertex2f(cx - size, cy);
         glVertex2f(cx + size, cy);
@@ -158,13 +167,48 @@ void drawCrosshair()
         glVertex2f(cx, cy + size);
     glEnd();
 
+    // Draw Phase Transition Text above crosshair
+    if (myvirtualworld.isCaineActive && myvirtualworld.caine.isTransitioning)
+    {
+        float timer = myvirtualworld.caine.transitionTimer;
+        if (timer <= 2.0f)
+        {
+            float alpha = 0.0f;
+            if (timer <= 0.5f) {
+                alpha = timer / 0.5f;
+            } else if (timer <= 1.5f) {
+                alpha = 1.0f;
+            } else {
+                alpha = 1.0f - (timer - 1.5f) / 0.5f;
+            }
+
+            // Phase 2 color: Gold/Orange. Phase 3 color: Crimson Red.
+            if (myvirtualworld.caine.currentPhase == 2)
+            {
+                glColor4f(1.0f, 0.7f, 0.1f, alpha);
+            }
+            else if (myvirtualworld.caine.currentPhase == 3)
+            {
+                glColor4f(1.0f, 0.2f, 0.2f, alpha);
+            }
+            else
+            {
+                glColor4f(1.0f, 1.0f, 1.0f, alpha);
+            }
+
+            char phaseStr[32];
+            sprintf(phaseStr, "PHASE %d", myvirtualworld.caine.currentPhase);
+            drawCenteredString(GLUT_BITMAP_TIMES_ROMAN_24, phaseStr, cy + 30.0f, 0, window.width);
+        }
+    }
+
     glPopMatrix();
 
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
 
-    glEnable(GL_DEPTH_TEST);
+    glPopAttrib();
 }
 
 static void drawString(void* font, const char* str, float x, float y)
@@ -211,11 +255,15 @@ void drawHUD()
     float right = left + barWidth;
     float top = bottom + barHeight;
 
-    // Draw Health Bar Label
+    // Draw Health Bar & Ammo Labels
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     char kingerHealthText[64];
     sprintf(kingerHealthText, "KINGER  %d / %d", myvirtualworld.kinger.currentHealth, myvirtualworld.kinger.maxHealth);
     drawString(GLUT_BITMAP_HELVETICA_12, kingerHealthText, left, top + 6.0f);
+
+    char kingerAmmoText[64];
+    sprintf(kingerAmmoText, "Ammo: %d / %d", myvirtualworld.kinger.animation.currentAmmo, myvirtualworld.kinger.animation.MAX_AMMO);
+    drawString(GLUT_BITMAP_HELVETICA_12, kingerAmmoText, left, top + 20.0f);
 
     // Background Container
     glColor4f(0.08f, 0.08f, 0.12f, 0.7f);
@@ -336,7 +384,7 @@ void drawHUD()
             glVertex2f(bossLeft, bossTop);
         glEnd();
 
-        // Fill (Vibrant Purple/Magenta representing Caine)
+        // Fill (Vibrant colors depending on Caine's current phase)
         float bossRatio = (float)myvirtualworld.caine.currentHealth / myvirtualworld.caine.maxHealth;
         if (bossRatio < 0.0f) bossRatio = 0.0f;
         if (bossRatio > 1.0f) bossRatio = 1.0f;
@@ -345,12 +393,27 @@ void drawHUD()
         if (bossRatio > 0.0f)
         {
             glBegin(GL_QUADS);
-                glColor4f(0.7f, 0.1f, 0.7f, 1.0f);
+                // Color dynamically shifts depending on Caine's current phase
+                float rStart = 0.7f, gStart = 0.1f, bStart = 0.7f; // Phase 1: Vibrant Purple
+                float rEnd = 0.95f, gEnd = 0.2f, bEnd = 0.95f;
+                
+                if (myvirtualworld.caine.currentPhase == 2) // Phase 2: Orange/Gold
+                {
+                    rStart = 0.9f; gStart = 0.3f; bStart = 0.0f;
+                    rEnd = 1.0f; gEnd = 0.6f; bEnd = 0.1f;
+                }
+                else if (myvirtualworld.caine.currentPhase == 3) // Phase 3: Crimson/Red
+                {
+                    rStart = 0.7f; gStart = 0.0f; bStart = 0.1f;
+                    rEnd = 0.95f; gEnd = 0.1f; bEnd = 0.2f;
+                }
+
+                glColor4f(rStart, gStart, bStart, 1.0f);
                 glVertex2f(bossLeft, bossBottom);
-                glColor4f(0.95f, 0.2f, 0.95f, 1.0f);
+                glColor4f(rEnd, gEnd, bEnd, 1.0f);
                 glVertex2f(bossFillRight, bossBottom);
                 glVertex2f(bossFillRight, bossTop);
-                glColor4f(0.7f, 0.1f, 0.7f, 1.0f);
+                glColor4f(rStart, gStart, bStart, 1.0f);
                 glVertex2f(bossLeft, bossTop);
             glEnd();
         }
@@ -397,50 +460,63 @@ void drawHUD()
         float cy2 = H * 0.5f;
 
         // Triangle size
-        float triBase  = 120.0f; // half-width of the triangle base
-        float triDepth = 80.0f;  // how far the tip juts inward from the edge
+        float triBase  = 60.0f; // half-width of the triangle base
+        float triDepth = 40.0f; // how far the tip juts inward from the base
+        float radius   = std::min(W, H) * 0.25f; // base distance from screen center
 
-        // Edge padding (so the base sits right at the screen border)
-        float edgePad = 0.0f;
+        // Compute threat direction unit vector (dx, dy) in screen coordinates
+        float dx = 0.0f;
+        float dy = 0.0f;
+        if (sweepDir == 0) // North: threat comes from negative Z.
+        {
+            dx = std::sin(cameraYaw);
+            dy = std::cos(cameraYaw);
+        }
+        else if (sweepDir == 1) // South: threat comes from positive Z.
+        {
+            dx = -std::sin(cameraYaw);
+            dy = -std::cos(cameraYaw);
+        }
+        else if (sweepDir == 2) // West: threat comes from negative X.
+        {
+            dx = -std::cos(cameraYaw);
+            dy = std::sin(cameraYaw);
+        }
+        else // East (sweepDir == 3): threat comes from positive X.
+        {
+            dx = std::cos(cameraYaw);
+            dy = -std::sin(cameraYaw);
+        }
 
-        // Tip (pointing inward) and two base corners for each direction:
-        float tx = 0.0f, ty = 0.0f;   // tip
-        float b1x = 0.0f, b1y = 0.0f; // base corner 1
-        float b2x = 0.0f, b2y = 0.0f; // base corner 2
+        // Normalize threat direction vector to avoid floating point issues
+        float len = std::sqrt(dx * dx + dy * dy);
+        if (len > 0.0f)
+        {
+            dx /= len;
+            dy /= len;
+        }
 
-        // Direction label position
-        float labelX = 0.0f, labelY = 0.0f;
+        // Base center of threat triangle
+        float bx = cx2 + radius * dx;
+        float by = cy2 + radius * dy;
+
+        // Tip pointing inwards (towards center)
+        float tx = cx2 + (radius - triDepth) * dx;
+        float ty = cy2 + (radius - triDepth) * dy;
+
+        // Base corners offset perpendicularly from base center (bx, by)
+        float b1x = bx - triBase * dy;
+        float b1y = by + triBase * dx;
+        float b2x = bx + triBase * dy;
+        float b2y = by - triBase * dx;
+
+        // Warning label text position (aligned outside the base, further away from center)
+        float labelDist = radius + 15.0f;
+        float lx = cx2 + labelDist * dx;
+        float ly = cy2 + labelDist * dy;
+        float labelX = lx - 26.0f;
+        float labelY = ly - 5.0f;
         const char* warningLabel = "! SWEEP !";
-
-        if (sweepDir == 0) // North -> South: wall comes from top of screen (Z negative = north in world)
-        {
-            // Arrow at top center pointing down
-            tx  = cx2;          ty  = H - edgePad - triDepth;
-            b1x = cx2 - triBase; b1y = H - edgePad;
-            b2x = cx2 + triBase; b2y = H - edgePad;
-            labelX = cx2 - 26.0f; labelY = H - edgePad - triDepth - 18.0f;
-        }
-        else if (sweepDir == 1) // South -> North: wall comes from bottom
-        {
-            tx  = cx2;          ty  = edgePad + triDepth;
-            b1x = cx2 - triBase; b1y = edgePad;
-            b2x = cx2 + triBase; b2y = edgePad;
-            labelX = cx2 - 26.0f; labelY = edgePad + triDepth + 6.0f;
-        }
-        else if (sweepDir == 2) // West -> East: wall comes from left
-        {
-            tx  = edgePad + triDepth; ty  = cy2;
-            b1x = edgePad;            b1y = cy2 - triBase;
-            b2x = edgePad;            b2y = cy2 + triBase;
-            labelX = edgePad + triDepth + 6.0f; labelY = cy2 + 6.0f;
-        }
-        else // East -> West: wall comes from right (sweepDir == 3)
-        {
-            tx  = W - edgePad - triDepth; ty  = cy2;
-            b1x = W - edgePad;            b1y = cy2 - triBase;
-            b2x = W - edgePad;            b2y = cy2 + triBase;
-            labelX = W - edgePad - triDepth - 50.0f; labelY = cy2 + 6.0f;
-        }
 
         // Draw filled triangle with additive-style blending for glow effect
         glColor4f(1.0f, 0.08f, 0.08f, pulseAlpha);
@@ -685,7 +761,166 @@ void drawMenuUI()
         glColor4f(0.6f, 0.6f, 0.6f, 0.7f);
         drawCenteredString(GLUT_BITMAP_HELVETICA_12, "Press [ESC], [z], or [0] to Resume", bottom + 20.0f, left, right);
     }
-    else
+    else if (currentUIState == DEATH_SCREEN)
+    {
+        // 1. Draw Semi-transparent Full-Screen Red Tint Background
+        glColor4f(0.15f, 0.02f, 0.02f, 0.65f); // transparent dark red
+        glBegin(GL_QUADS);
+            glVertex2f(0.0f, 0.0f);
+            glVertex2f(window.width, 0.0f);
+            glVertex2f(window.width, window.height);
+            glVertex2f(0.0f, window.height);
+        glEnd();
+
+        float width = 400.0f;
+        float height = 250.0f;
+        float left = cx - width / 2.0f;
+        float right = cx + width / 2.0f;
+        float top = cy + height / 2.0f;
+        float bottom = cy - height / 2.0f;
+
+        // Background
+        glBegin(GL_QUADS);
+            glColor4f(0.25f, 0.02f, 0.04f, 0.9f); // Dark burgundy top
+            glVertex2f(left, top);
+            glVertex2f(right, top);
+            glColor4f(0.08f, 0.01f, 0.02f, 0.95f); // Pitch black-red bottom
+            glVertex2f(right, bottom);
+            glVertex2f(left, bottom);
+        glEnd();
+
+        // Sleek double gold border with pulse animation
+        float tTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+        float pulse = 0.85f + 0.15f * std::sin(tTime * 3.5f);
+
+        glLineWidth(3.0f);
+        glColor4f(0.85f * pulse, 0.65f * pulse, 0.12f * pulse, 0.9f); // gold pulse
+        glBegin(GL_LINE_LOOP);
+            glVertex2f(left, bottom);
+            glVertex2f(right, bottom);
+            glVertex2f(right, top);
+            glVertex2f(left, top);
+        glEnd();
+
+        glLineWidth(1.0f);
+        glColor4f(0.9f, 0.8f, 0.5f, 0.5f);
+        glBegin(GL_LINE_LOOP);
+            glVertex2f(left + 5.0f, bottom + 5.0f);
+            glVertex2f(right - 5.0f, bottom + 5.0f);
+            glVertex2f(right - 5.0f, top - 5.0f);
+            glVertex2f(left + 5.0f, top - 5.0f);
+        glEnd();
+
+        // Title
+        glColor4f(1.0f, 0.15f, 0.15f, 1.0f); // Ominous Red
+        drawCenteredString(GLUT_BITMAP_TIMES_ROMAN_24, "YOU DIED", top - 45.0f, left, right);
+
+        // Divider
+        glLineWidth(1.0f);
+        glColor4f(0.85f, 0.65f, 0.12f, 0.4f);
+        glBegin(GL_LINES);
+            glVertex2f(left + 30.0f, top - 65.0f);
+            glVertex2f(right - 30.0f, top - 65.0f);
+        glEnd();
+
+        // Options
+        float startY = top - 110.0f;
+        float spacing = 45.0f;
+
+        // Restart
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "[1]", left + 50.0f, startY);
+        glColor4f(0.95f, 0.95f, 0.95f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "Restart Game", left + 90.0f, startY);
+
+        // Return to Menu
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "[2]", left + 50.0f, startY - spacing);
+        glColor4f(0.95f, 0.95f, 0.95f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "Return to Main Menu", left + 90.0f, startY - spacing);
+
+        // Footer
+        glColor4f(0.6f, 0.6f, 0.6f, 0.7f);
+        drawCenteredString(GLUT_BITMAP_HELVETICA_12, "Press numeric keys to select an option", bottom + 25.0f, left, right);
+    }
+    else if (currentUIState == WIN_SCREEN)
+    {
+        // 1. Draw Semi-transparent Full-Screen Blue/Teal Tint Background
+        glColor4f(0.02f, 0.1f, 0.15f, 0.65f); // transparent dark teal/blue
+        glBegin(GL_QUADS);
+            glVertex2f(0.0f, 0.0f);
+            glVertex2f(window.width, 0.0f);
+            glVertex2f(window.width, window.height);
+            glVertex2f(0.0f, window.height);
+        glEnd();
+
+        float width = 450.0f;
+        float height = 280.0f;
+        float left = cx - width / 2.0f;
+        float right = cx + width / 2.0f;
+        float top = cy + height / 2.0f;
+        float bottom = cy - height / 2.0f;
+
+        // Background
+        glBegin(GL_QUADS);
+            glColor4f(0.02f, 0.25f, 0.2f, 0.9f); // Dark teal/emerald top
+            glVertex2f(left, top);
+            glVertex2f(right, top);
+            glColor4f(0.01f, 0.05f, 0.12f, 0.95f); // Deep midnight blue bottom
+            glVertex2f(right, bottom);
+            glVertex2f(left, bottom);
+        glEnd();
+
+        // Sleek double gold border with pulse animation
+        float tTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+        float pulse = 0.85f + 0.15f * std::sin(tTime * 3.5f);
+
+        glLineWidth(3.0f);
+        glColor4f(0.85f * pulse, 0.65f * pulse, 0.12f * pulse, 0.9f); // gold pulse
+        glBegin(GL_LINE_LOOP);
+            glVertex2f(left, bottom);
+            glVertex2f(right, bottom);
+            glVertex2f(right, top);
+            glVertex2f(left, top);
+        glEnd();
+
+        glLineWidth(1.0f);
+        glColor4f(0.9f, 0.8f, 0.5f, 0.5f);
+        glBegin(GL_LINE_LOOP);
+            glVertex2f(left + 5.0f, bottom + 5.0f);
+            glVertex2f(right - 5.0f, bottom + 5.0f);
+            glVertex2f(right - 5.0f, top - 5.0f);
+            glVertex2f(left + 5.0f, top - 5.0f);
+        glEnd();
+
+        // Title & Subtitle
+        glColor4f(0.0f, 1.0f, 0.6f, 1.0f); // Bright Teal/Emerald Green
+        drawCenteredString(GLUT_BITMAP_TIMES_ROMAN_24, "YOU WON", top - 45.0f, left, right);
+        glColor4f(0.85f, 0.75f, 0.5f, 0.9f); // Soft gold subtext
+        drawCenteredString(GLUT_BITMAP_HELVETICA_12, "You just killed Caine", top - 65.0f, left, right);
+
+        // Divider
+        glLineWidth(1.0f);
+        glColor4f(0.85f, 0.65f, 0.12f, 0.4f);
+        glBegin(GL_LINES);
+            glVertex2f(left + 30.0f, top - 80.0f);
+            glVertex2f(right - 30.0f, top - 80.0f);
+        glEnd();
+
+        // Options
+        float startY = top - 135.0f;
+
+        // Return to Menu
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "[1]", left + 60.0f, startY);
+        glColor4f(0.95f, 0.95f, 0.95f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "Return to Main Menu", left + 100.0f, startY);
+
+        // Footer
+        glColor4f(0.6f, 0.6f, 0.6f, 0.7f);
+        drawCenteredString(GLUT_BITMAP_HELVETICA_12, "Press [1] to select an option", bottom + 25.0f, left, right);
+    }
+    else if (currentUIState == GAMEPLAY)
     {
         // HUD Hint during Gameplay
         float width = 140.0f;
@@ -745,18 +980,54 @@ void updateKeyStatesFromWindows()
 
 void myDisplayFunc(void)
 {
- glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
- 
- // Get player position and scale for camera calculations
- float& kX = myvirtualworld.kinger.posX;
- float& kZ = myvirtualworld.kinger.posZ;
- const float kScale = myvirtualworld.kinger.uniformScale;
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  
+  // Get player position and scale for camera calculations
+  float& kX = myvirtualworld.kinger.posX;
+  float& kZ = myvirtualworld.kinger.posZ;
+  const float kScale = myvirtualworld.kinger.uniformScale;
 
- static int lastTime = glutGet(GLUT_ELAPSED_TIME);
- int currentTime = glutGet(GLUT_ELAPSED_TIME);
- float deltaTime = (currentTime - lastTime) / 1000.0f;
- if (deltaTime > 0.1f) deltaTime = 0.1f;
- lastTime = currentTime;
+  static int lastTime = glutGet(GLUT_ELAPSED_TIME);
+  int currentTime = glutGet(GLUT_ELAPSED_TIME);
+  float deltaTime = (currentTime - lastTime) / 1000.0f;
+  if (deltaTime > 0.1f) deltaTime = 0.1f;
+  lastTime = currentTime;
+
+  // Game state checks: Death & Win
+  if (currentUIState == GAMEPLAY)
+  {
+      // Death Check: Kinger is dead and has finished his falling animation (1.0s delay)
+      if (myvirtualworld.kinger.animation.isDead && myvirtualworld.kinger.animation.deathTimer >= 1.0f)
+      {
+          currentUIState = DEATH_SCREEN;
+      }
+
+      // Win Check: Caine is dead in Phase 3
+      if (myvirtualworld.isCaineActive && myvirtualworld.caine.animation.isDead && myvirtualworld.caine.currentPhase == 3)
+      {
+          if (!isWinDelayed)
+          {
+              isWinDelayed = true;
+              winDelayTimer = 0.0f;
+              // Clear all Gloinks
+              myvirtualworld.gloinks.animation.activeGloinks.clear();
+              // Clear all Caine projectiles
+              for (int i = 0; i < myvirtualworld.caine.MAX_CAINE_PROJECTILES; i++)
+              {
+                  myvirtualworld.caine.projectiles[i].active = false;
+              }
+              // Clear Kinger bullets
+              myvirtualworld.kinger.animation.isBulletActive = false;
+          }
+          
+          winDelayTimer += deltaTime;
+          if (winDelayTimer >= 5.0f)
+          {
+              currentUIState = WIN_SCREEN;
+              isWinDelayed = false;
+          }
+      }
+  }
  
  // Smoothly follow the player's Y position
  cameraTrackY += (myvirtualworld.kinger.posY - cameraTrackY) * CAMERA_FOLLOW_SPEED * deltaTime;
@@ -876,9 +1147,12 @@ void myDisplayFunc(void)
  glFlush();
  glutSwapBuffers();
 
- updateKeyStatesFromWindows();
- myvirtualworld.tickTime(cameraYaw, cameraPitch, keyStates);
- glutPostRedisplay();
+  updateKeyStatesFromWindows();
+  if (currentUIState == GAMEPLAY)
+  {
+      myvirtualworld.tickTime(cameraYaw, cameraPitch, keyStates);
+  }
+  glutPostRedisplay();
 }
 
 void myReshapeFunc(int width, int height)
@@ -890,6 +1164,35 @@ void myReshapeFunc(int width, int height)
 
 void myKeyboardFunc(unsigned char key, int x, int y)
 {
+  // Intercept keyboard actions in Death Screen
+  if (currentUIState == DEATH_SCREEN)
+  {
+      if (key == '1')
+      {
+          myvirtualworld.startGame();
+          currentUIState = GAMEPLAY;
+      }
+      else if (key == '2')
+      {
+          myvirtualworld.resetGame();
+          currentUIState = START_MENU;
+      }
+      glutPostRedisplay();
+      return;
+  }
+
+  // Intercept keyboard actions in Win Screen
+  if (currentUIState == WIN_SCREEN)
+  {
+      if (key == '1')
+      {
+          myvirtualworld.resetGame();
+          currentUIState = START_MENU;
+      }
+      glutPostRedisplay();
+      return;
+  }
+
   // Toggle menu with 'z', 'Z' or ESC (27)
   if (key == 'z' || key == 'Z' || key == 27)
   {
@@ -1227,85 +1530,168 @@ void myLightingInit()
  glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
  glEnable(GL_COLOR_MATERIAL);
 
- glMaterialfv(GL_FRONT, GL_SPECULAR, specref);
- glMateriali(GL_FRONT, GL_SHININESS, shininess);
+  glMaterialfv(GL_FRONT, GL_SPECULAR, specref);
+  glMateriali(GL_FRONT, GL_SHININESS, shininess);
 
- glEnable(GL_NORMALIZE);
+  glEnable(GL_NORMALIZE);
+}
+
+void enableConsoleANSI();
+void initLoadingScreen();
+void updateLoadingProgress(const std::string& action, const std::string& itemName);
+
+int currentLoadStep = 0;
+const int totalLoadSteps = 85;
+
+#ifdef _WIN32
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+#endif
+
+void enableConsoleANSI()
+{
+#ifdef _WIN32
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut != INVALID_HANDLE_VALUE)
+    {
+        DWORD dwMode = 0;
+        if (GetConsoleMode(hOut, &dwMode))
+        {
+            dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            SetConsoleMode(hOut, dwMode);
+        }
+    }
+#endif
+}
+
+void initLoadingScreen()
+{
+    enableConsoleANSI();
+    currentLoadStep = 0;
+    // Clear screen
+    std::cout << "\033[2J\033[H";
+    std::cout << "=================================================================\n";
+    std::cout << "*                  THE AMAZING DIGITAL CIRCUS                   *\n";
+    std::cout << "*                       L O A D I N G . . .                     *\n";
+    std::cout << "=================================================================\n\n";
+    std::cout << "  Progress: [>                                       ] 0%\n\n";
+    std::cout << "  Initializing systems...\n\n";
+    std::cout << "=================================================================\n";
+    std::cout.flush();
+}
+
+void updateLoadingProgress(const std::string& action, const std::string& itemName)
+{
+    currentLoadStep++;
+    if (currentLoadStep > totalLoadSteps) currentLoadStep = totalLoadSteps;
+
+    float percent = (float)currentLoadStep / totalLoadSteps * 100.0f;
+    int barWidth = 40;
+    int pos = (int)(barWidth * ((float)currentLoadStep / totalLoadSteps));
+
+    // Reset cursor to top-left (no screen flicker)
+    std::cout << "\033[H";
+
+    std::cout << "=================================================================\n";
+    std::cout << "*                  THE AMAZING DIGITAL CIRCUS                   *\n";
+    std::cout << "*                       L O A D I N G . . .                     *\n";
+    std::cout << "=================================================================\n\n";
+
+    std::cout << "  Progress: [";
+    for (int i = 0; i < barWidth; ++i) {
+        if (i < pos) std::cout << "=";
+        else if (i == pos) std::cout << ">";
+        else std::cout << " ";
+    }
+    std::cout << "] " << (int)percent << "%\n\n";
+
+    std::cout << "  " << action << ": \033[K" << itemName << "\n\n";
+    std::cout << "=================================================================\n";
+    std::cout.flush();
 }
 
 void myInit()
 {
- myDataInit();
+  myDataInit();
 
- glutInitDisplayMode( GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH );
- glutInitWindowPosition(window.posX, window.posY); // Set top-left position
- glutInitWindowSize(window.width, window.height); //Set width and height
- glutCreateWindow(window.title.c_str());// Create display window
+  glutInitDisplayMode( GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH );
+  glutInitWindowPosition(window.posX, window.posY); // Set top-left position
+  glutInitWindowSize(window.width, window.height); //Set width and height
+  glutCreateWindow(window.title.c_str());// Create display window
 
- glutDisplayFunc(myDisplayFunc);
- glutReshapeFunc(myReshapeFunc);
- glutKeyboardFunc(myKeyboardFunc);
- glutSpecialFunc(mySpecialFunc);
- glutMotionFunc(myMotionFunc);
- glutMouseFunc(myMouseFunc);
- glutPassiveMotionFunc(myPassiveMotionFunc); // mouse-look without button
- glutSetCursor(GLUT_CURSOR_NONE);            // hide cursor for immersive look
+  glutDisplayFunc(myDisplayFunc);
+  glutReshapeFunc(myReshapeFunc);
+  glutKeyboardFunc(myKeyboardFunc);
+  glutSpecialFunc(mySpecialFunc);
+  glutMotionFunc(myMotionFunc);
+  glutMouseFunc(myMouseFunc);
+  glutPassiveMotionFunc(myPassiveMotionFunc); // mouse-look without button
+  glutSetCursor(GLUT_CURSOR_NONE);            // hide cursor for immersive look
 
- glPointSize(4.0);
- glEnable(GL_DEPTH_TEST);
- glDepthFunc(GL_LESS);
- glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
- glFrontFace(GL_CCW);
- glShadeModel (GL_SMOOTH);
- glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
- glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+  glPointSize(4.0);
+  glEnable(GL_DEPTH_TEST);
+  glDepthFunc(GL_LESS);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  glFrontFace(GL_CCW);
+  glShadeModel (GL_SMOOTH);
+  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+  glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
- glEnable(GL_CULL_FACE);
+  glEnable(GL_CULL_FACE);
 
- myViewingInit();
+  myViewingInit();
 
- myLightingInit();
+  myLightingInit();
 
+  initLoadingScreen();
   myvirtualworld.init();
+
+  // Clear screen and print control info when loading finishes
+  #ifdef _WIN32
+  system("cls");
+  #else
+  std::cout << "\033[2J\033[H";
+  #endif
+  myWelcome();
+
   myvirtualworld.resetGame();
 }
 
 void myWelcome()
 {
- cout << "*****************************************************************\n";
- cout << "*                   TCG6223 Computer Graphics                   *\n";
- cout << "*                  FIST, Multimedia University                  *\n";
- cout << "*****************************************************************\n";
- cout << "| TPS Controls:                                                 |\n";
- cout << "|   <w>,<s>             => move Kinger forward / backward       |\n";
- cout << "|   <a>,<d>             => strafe Kinger left / right           |\n";
- cout << "|   <f>                 => cast heal skill                      |\n";
- cout << "|   <c>                 => roll                                 |\n";
- cout << "|   Mouse (move)        => rotate camera (yaw + pitch)          |\n";
- cout << "|   Arrow UP/DOWN       => camera pitch (keyboard fallback)     |\n";
- cout << "|   Arrow LEFT/RIGHT    => camera yaw   (keyboard fallback)     |\n";
- cout << "|   SPACE               => jump                                 |\n";
- cout << "|   HOME                => restore defaults                     |\n";
- cout << "|   ESC                 => exit                                 |\n";
- cout << "|                                                               |\n";
- cout << "|   F1  => toggle shading / wire-frame                          |\n";
- cout << "|   F2  => toggle axis rendering                                |\n";
- cout << "|   F3  => toggle lighting on / off                             |\n";
- cout << "|   <b> => toggle hitbox outlines on / off                      |\n";
- cout << "*****************************************************************\n";
- cout << "|                      H A V E   F U N  !!!                    |\n";
- cout << "*****************************************************************\n";
+  cout << "*****************************************************************\n";
+  cout << "*                   TCG6223 Computer Graphics                   *\n";
+  cout << "*                  FIST, Multimedia University                  *\n";
+  cout << "*****************************************************************\n";
+  cout << "| TPS Controls:                                                 |\n";
+  cout << "|   <w>,<s>             => move Kinger forward / backward       |\n";
+  cout << "|   <a>,<d>             => strafe Kinger left / right           |\n";
+  cout << "|   <f>                 => cast heal skill                      |\n";
+  cout << "|   <c>                 => roll                                 |\n";
+  cout << "|   Mouse (move)        => rotate camera (yaw + pitch)          |\n";
+  cout << "|   Arrow UP/DOWN       => camera pitch (keyboard fallback)     |\n";
+  cout << "|   Arrow LEFT/RIGHT    => camera yaw   (keyboard fallback)     |\n";
+  cout << "|   SPACE               => jump                                 |\n";
+  cout << "|   HOME                => restore defaults                     |\n";
+  cout << "|   ESC                 => exit                                 |\n";
+  cout << "|                                                               |\n";
+  cout << "|   F1  => toggle shading / wire-frame                          |\n";
+  cout << "|   F2  => toggle axis rendering                                |\n";
+  cout << "|   F3  => toggle lighting on / off                             |\n";
+  cout << "|   <b> => toggle hitbox outlines on / off                      |\n";
+  cout << "*****************************************************************\n";
+  cout << "|                      H A V E   F U N  !!!                    |\n";
+  cout << "*****************************************************************\n";
 }
 
 //--------------------------------------------------------------------
 int main(int argc, char **argv)
 {
- glutInit(&argc, argv);
+  glutInit(&argc, argv);
 
- myWelcome();
+  myInit();
 
- myInit();
-
- glutMainLoop(); // Display everything and wait
+  glutMainLoop(); // Display everything and wait
 }
 //--------------------------------------------------------------------

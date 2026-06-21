@@ -124,7 +124,7 @@ void Kinger::setScale(float scale)
  */
 void Kinger::jump()
 {
-    if (animation.isHealing || animation.isDead) return;
+    if (animation.isDead) return;
 
     if (isGrounded)
     {
@@ -196,7 +196,10 @@ void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const b
 
         if (animation.deathTimer >= RESPAWN_DELAY)
         {
-            rebirth();
+            if (::myvirtualworld.isDebugMode)
+            {
+                rebirth();
+            }
         }
         return;
     }
@@ -227,7 +230,6 @@ void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const b
     animation.updateHealState(deltaTime);
     animation.updateHurtState(deltaTime);
 
-    if (!animation.isHealing)
     {
         float fwd = 0.0f;
         float rgt = 0.0f;

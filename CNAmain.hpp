@@ -134,7 +134,7 @@ class MyAxis
      setLength(20.0f, 20.0f, 20.0f);
      setLineStipple(1, 0xffff);
      setLineWidth(1);
-     shoulddraw = true;
+     shoulddraw = false;
     }
 
     void setLength(GLfloat xLen, GLfloat yLen, GLfloat zLen)

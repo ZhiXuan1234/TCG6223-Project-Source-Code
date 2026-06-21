@@ -101,12 +101,8 @@ bool ObjModel::loadFromObjText(const std::string& filePath)
     fin.close();
 
 
-    std::cout << "Loaded model: " << filePath
-              << "\nVertices: " << vertices.size()
-              << "\nNormals : " << normals.size()
-              << "\nTexCoords: " << texCoords.size()
-              << "\nFaces    : " << faces.size()
-              << std::endl;
+    extern void updateLoadingProgress(const std::string& action, const std::string& itemName);
+    updateLoadingProgress("Loading Model", filePath);
 
     return !vertices.empty() && !faces.empty();
 }

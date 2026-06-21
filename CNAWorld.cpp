@@ -578,8 +578,14 @@ void MyVirtualWorld::tickTime(float cameraYaw, float cameraPitch, const bool* ke
     environment.tickTime();
 }
 
+extern bool isWinDelayed;
+extern float winDelayTimer;
+
 void MyVirtualWorld::resetGame()
 {
+    isWinDelayed = false;
+    winDelayTimer = 0.0f;
+
     // Clear Gloinks
     gloinks.animation.activeGloinks.clear();
 

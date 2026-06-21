@@ -114,7 +114,13 @@ KingerAnimation::KingerAnimation()
  */
 void KingerAnimation::castGunSkill()
 {
-    if (isRolling || isReloading || currentAmmo <= 0 || isHealing || isHurt) return;
+    if (isRolling || isReloading || isHealing || isHurt) return;
+
+    if (currentAmmo <= 0)
+    {
+        castReload();
+        return;
+    }
 
     if (!isCastingSkill)
     {
@@ -195,9 +201,9 @@ void KingerAnimation::updateSkillState(float deltaTime, float currentYaw, float 
             float t = skillTimer / 0.05f;
             armRecoilOffset = t * 3.0f;
         }
-        else if (skillTimer <= 0.25f)
+        else if (skillTimer <= 0.5f)
         {
-            float t = (skillTimer - 0.05f) / 0.20f;
+            float t = (skillTimer - 0.05f) / 0.45f;
             float ease = 1.0f - std::cos(t * 3.14159265f / 2.0f); 
             armRecoilOffset = 3.0f * (1.0f - ease);
         }
