@@ -105,20 +105,48 @@ void GloinksAnimation::updateGloinks(float deltaTime)
     // Spawning: only in gameplay mode (not debug mode)
     if (!::myvirtualworld.isDebugMode)
     {
-        int aliveCount = 0;
-        for (const auto& g : activeGloinks)
+        if (::myvirtualworld.isCaineActive)
         {
-            if (!g.isDead) aliveCount++;
+            if (::myvirtualworld.caine.currentPhase == 1)
+            {
+                maxGloinks = 0;
+                activeGloinks.clear();
+            }
+            else if (::myvirtualworld.caine.currentPhase == 2)
+            {
+                maxGloinks = 5;
+            }
+            else if (::myvirtualworld.caine.currentPhase == 3)
+            {
+                if (::myvirtualworld.caine.animation.isDead)
+                {
+                    activeGloinks.clear();
+                    maxGloinks = 0;
+                }
+                else
+                {
+                    maxGloinks = 10;
+                }
+            }
         }
 
-        if (aliveCount < maxGloinks)
+        if (maxGloinks > 0)
         {
-            spawnTimer += deltaTime;
-            if (spawnTimer >= spawnInterval)
+            int aliveCount = 0;
+            for (const auto& g : activeGloinks)
             {
-                spawnGloink();
-                spawnTimer = 0.0f;
-                spawnInterval = 2.0f + static_cast<float>(std::rand()) / (static_cast<float>(RAND_MAX / 1.0f));
+                if (!g.isDead) aliveCount++;
+            }
+
+            if (aliveCount < maxGloinks)
+            {
+                spawnTimer += deltaTime;
+                if (spawnTimer >= spawnInterval)
+                {
+                    spawnGloink();
+                    spawnTimer = 0.0f;
+                    spawnInterval = 2.0f + static_cast<float>(std::rand()) / (static_cast<float>(RAND_MAX / 1.0f));
+                }
             }
         }
     }
@@ -261,7 +289,7 @@ void GloinksAnimation::updateGloinks(float deltaTime)
                         // Kinger takes damage
                         if (!::myvirtualworld.kinger.animation.isDead)
                         {
-                            ::myvirtualworld.kinger.takeDamage(10);
+                            ::myvirtualworld.kinger.takeDamage(1);
                         }
 
                         // Trigger knockback state (0.5 seconds duration, speed is 100.0f/s)

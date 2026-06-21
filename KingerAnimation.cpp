@@ -3,6 +3,7 @@
 #include "CNAWorld.hpp"
 
 extern ProjectWorld::MyVirtualWorld myvirtualworld;
+extern bool isTestArena;
 
 static bool checkSegmentAABB(float x0, float y0, float z0, float x1, float y1, float z1,
                              float minX, float maxX, float minY, float maxY, float minZ, float maxZ)
@@ -71,6 +72,7 @@ KingerAnimation::KingerAnimation()
     , skillBodyZOffset(0.0f)
     , armRecoilOffset(0.0f)
     , isBulletActive(false)
+    , hasSpawnedBullet(false)
     , shootYaw(0.0f)
     , shootPitch(0.0f)
     , bulletPosX(20.0f)
@@ -97,7 +99,7 @@ KingerAnimation::KingerAnimation()
     , leftArmReloadYOffset(0.0f)
     , rightArmReloadPitch(0.0f)
     , rightArmReloadYaw(0.0f)
-    , butterflyCharges(100)
+    , butterflyCharges(3)
     , isHealing(false)
     , healTimer(0.0f)
     , leftArmHealPitch(0.0f)
@@ -114,11 +116,21 @@ KingerAnimation::KingerAnimation()
  */
 void KingerAnimation::castGunSkill()
 {
-    if (isRolling || isReloading || currentAmmo <= 0 || isHealing || isHurt) return;
+    if (isRolling || isReloading || isHealing || isHurt) return;
+
+    if (currentAmmo <= 0)
+    {
+        castReload();
+        return;
+    }
 
     if (!isCastingSkill)
     {
-        currentAmmo--;
+        extern bool isTestArena;
+        if (!isTestArena)
+        {
+            currentAmmo--;
+        }
 
         isCastingSkill  = true;
         skillTimer      = 0.0f;
@@ -127,6 +139,7 @@ void KingerAnimation::castGunSkill()
         skillBodyZOffset  = 0.0f;
         armRecoilOffset   = 0.0f;
         isBulletActive = false;
+        hasSpawnedBullet = false;
         shootYaw       = 0.0f;
         shootPitch     = 0.0f;
         bulletPosX     = 0.0f;
@@ -157,47 +170,48 @@ void KingerAnimation::updateSkillState(float deltaTime, float currentYaw, float 
     {
         skillTimer += deltaTime;
 
+        if (!hasSpawnedBullet)
+        {
+            hasSpawnedBullet = true;
+            isBulletActive = true;
+            shouldSpawnMuzzleFlash = true;
+            shootYaw       = currentYaw;
+            shootPitch     = currentPitch;
+            bulletDistance = 0.0f;
+            bulletLifeTimer = 0.0f;
+
+            // Access the global camera variables updated in CNAmain.cpp
+            extern float currentCameraEyeX;
+            extern float currentCameraEyeY;
+            extern float currentCameraEyeZ;
+
+            extern float currentCameraDirX;
+            extern float currentCameraDirY;
+            extern float currentCameraDirZ;
+
+            // 1. Set bullet start position directly to the center of the camera, offset by 10.0f units forward
+            bulletStartX = currentCameraEyeX + currentCameraDirX * 40.0f;
+            bulletStartY = (currentCameraEyeY - 5.0f) + currentCameraDirY * 40.0f;
+            bulletStartZ = currentCameraEyeZ + currentCameraDirZ * 40.0f;
+
+            bulletPosX = bulletStartX;
+            bulletPosY = bulletStartY;
+            bulletPosZ = bulletStartZ;
+
+            // 2. Set trajectory direction directly to the camera's look direction
+            bulletDirX = currentCameraDirX;
+            bulletDirY = currentCameraDirY;
+            bulletDirZ = currentCameraDirZ;
+        }
+
         if (skillTimer <= 0.05f)
         {
-            if (!isBulletActive)
-            {
-                isBulletActive = true;
-                shouldSpawnMuzzleFlash = true;
-                shootYaw       = currentYaw;
-                shootPitch     = currentPitch;
-                bulletDistance = 0.0f;
-                bulletLifeTimer = 0.0f;
-
-                // Access the global camera variables updated in CNAmain.cpp
-                extern float currentCameraEyeX;
-                extern float currentCameraEyeY;
-                extern float currentCameraEyeZ;
-
-                extern float currentCameraDirX;
-                extern float currentCameraDirY;
-                extern float currentCameraDirZ;
-
-                // 1. Set bullet start position directly to the center of the camera, offset by 10.0f units forward
-                bulletStartX = currentCameraEyeX + currentCameraDirX * 40.0f;
-                bulletStartY = (currentCameraEyeY - 5.0f) + currentCameraDirY * 40.0f;
-                bulletStartZ = currentCameraEyeZ + currentCameraDirZ * 40.0f;
-
-                bulletPosX = bulletStartX;
-                bulletPosY = bulletStartY;
-                bulletPosZ = bulletStartZ;
-
-                // 2. Set trajectory direction directly to the camera's look direction
-                bulletDirX = currentCameraDirX;
-                bulletDirY = currentCameraDirY;
-                bulletDirZ = currentCameraDirZ;
-            }
-
             float t = skillTimer / 0.05f;
             armRecoilOffset = t * 3.0f;
         }
-        else if (skillTimer <= 0.25f)
+        else if (skillTimer <= 0.5f)
         {
-            float t = (skillTimer - 0.05f) / 0.20f;
+            float t = (skillTimer - 0.05f) / 0.45f;
             float ease = 1.0f - std::cos(t * 3.14159265f / 2.0f); 
             armRecoilOffset = 3.0f * (1.0f - ease);
         }
@@ -241,22 +255,57 @@ void KingerAnimation::updateSkillState(float deltaTime, float currentYaw, float 
             // Check collision against Caine if he is active and alive
             if (::myvirtualworld.isCaineActive && !::myvirtualworld.caine.animation.isDead)
             {
-                Vec3 caineCenter = ::myvirtualworld.caine.getCaineWorldCenter();
-                float halfExtent = 12.0f * ::myvirtualworld.caine.uniformScale;
-
-                float minX = caineCenter.x - halfExtent;
-                float maxX = caineCenter.x + halfExtent;
-                float minY = caineCenter.y - halfExtent;
-                float maxY = caineCenter.y + halfExtent;
-                float minZ = caineCenter.z - halfExtent;
-                float maxZ = caineCenter.z + halfExtent;
-
-                if (checkSegmentAABB(oldBulletPosX, oldBulletPosY, oldBulletPosZ,
-                                     bulletPosX, bulletPosY, bulletPosZ,
-                                     minX, maxX, minY, maxY, minZ, maxZ))
+                bool hitSomething = false;
+                // If in Doctor Strange phase 2, check clones first!
+                if (::myvirtualworld.caine.doctorStrangeState == 2)
                 {
-                    ::myvirtualworld.caine.takeDamage(1);
-                    isBulletActive = false;
+                    for (int i = 0; i < ProjectCaine::Caine::MAX_CLONES; i++)
+                    {
+                        ProjectCaine::Caine* clone = ::myvirtualworld.caine.clones[i];
+                        if (clone && !clone->animation.isDead)
+                        {
+                            Vec3 cloneCenter = clone->getCaineWorldCenter();
+                            float halfExtent = 12.0f * clone->uniformScale;
+
+                            float minX = cloneCenter.x - halfExtent;
+                            float maxX = cloneCenter.x + halfExtent;
+                            float minY = cloneCenter.y - halfExtent;
+                            float maxY = cloneCenter.y + halfExtent;
+                            float minZ = cloneCenter.z - halfExtent;
+                            float maxZ = cloneCenter.z + halfExtent;
+
+                            if (checkSegmentAABB(oldBulletPosX, oldBulletPosY, oldBulletPosZ,
+                                                 bulletPosX, bulletPosY, bulletPosZ,
+                                                 minX, maxX, minY, maxY, minZ, maxZ))
+                            {
+                                clone->takeDamage(2);
+                                isBulletActive = false;
+                                hitSomething = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!hitSomething)
+                {
+                    Vec3 caineCenter = ::myvirtualworld.caine.getCaineWorldCenter();
+                    float halfExtent = 12.0f * ::myvirtualworld.caine.uniformScale;
+
+                    float minX = caineCenter.x - halfExtent;
+                    float maxX = caineCenter.x + halfExtent;
+                    float minY = caineCenter.y - halfExtent;
+                    float maxY = caineCenter.y + halfExtent;
+                    float minZ = caineCenter.z - halfExtent;
+                    float maxZ = caineCenter.z + halfExtent;
+
+                    if (checkSegmentAABB(oldBulletPosX, oldBulletPosY, oldBulletPosZ,
+                                         bulletPosX, bulletPosY, bulletPosZ,
+                                         minX, maxX, minY, maxY, minZ, maxZ))
+                    {
+                        ::myvirtualworld.caine.takeDamage(5);
+                        isBulletActive = false;
+                    }
                 }
             }
 
@@ -456,15 +505,19 @@ void KingerAnimation::updateReloadState(float deltaTime)
  */
 void KingerAnimation::castHealSkill(int& currentHealth, int maxHealth)
 {
-    if (isHealing || isRolling || butterflyCharges <= 0 || isHurt) return;
+    if (isHealing || isRolling || butterflyCharges <= 0 || isHurt || currentHealth >= maxHealth) return;
 
     isHealing = true;
     healTimer = 0.0f;
     leftArmHealPitch = 0.0f;
-    butterflyCharges--;
 
-    currentHealth += 30;
-    if (currentHealth > maxHealth) currentHealth = maxHealth;
+    extern bool isTestArena;
+    if (!isTestArena)
+    {
+        butterflyCharges--;
+    }
+
+    currentHealth = maxHealth;
 }
 
 /**
@@ -530,6 +583,7 @@ void KingerAnimation::triggerHurt()
     skillBodyZOffset = 0.0f;
     armRecoilOffset = 0.0f;
     isBulletActive = false;
+    hasSpawnedBullet = false;
     bulletDistance = 0.0f;
 
     isRolling = false;
@@ -582,6 +636,7 @@ void KingerAnimation::triggerDeath()
     skillBodyZOffset = 0.0f;
     armRecoilOffset = 0.0f;
     isBulletActive = false;
+    hasSpawnedBullet = false;
     bulletDistance = 0.0f;
 
     isRolling = false;

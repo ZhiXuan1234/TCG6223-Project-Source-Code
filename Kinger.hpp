@@ -73,6 +73,8 @@ public:
     void update(float deltaTime, float cameraYaw, float cameraPitch, const bool* keyStates);
     
     float velocityY;    // Vertical speed velocity tracking jumping and gravity
+    float knockbackVelX; // Horizontal knockback X velocity
+    float knockbackVelZ; // Horizontal knockback Z velocity
     bool isGrounded;    // Flag indicating if Kinger is currently touching the floor
     float jumpScaleY;   // Squash and stretch scaling factor applied during landing/jumping impact
     

@@ -33,8 +33,11 @@ private:
     std::vector<Vec3> normals;
     std::vector<Vec2> texCoords;
     std::vector<TriangleFace> faces;
+    mutable unsigned int displayListId;
+    mutable bool hasDisplayList;
 
 public:
+    ObjModel();
     void clear();
     bool loadFromObjText(const std::string& filePath);
     void draw() const;

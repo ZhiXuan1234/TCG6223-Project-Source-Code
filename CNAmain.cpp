@@ -130,12 +130,41 @@ float currentCameraDirY = 0.0f;
 float currentCameraDirZ = 0.0f;
 
 bool showHitboxes = false; // Toggle to render green hitboxes around active Gloinks
-enum GameUIState { START_MENU, GAMEPLAY, PAUSE_MENU };
+enum GameUIState { START_MENU, GAMEPLAY, PAUSE_MENU, DEATH_SCREEN, WIN_SCREEN };
 GameUIState currentUIState = START_MENU;
+bool isWinDelayed = false;
+float winDelayTimer = 0.0f;
+bool isTestArena = false;
+bool isDifficultyEasy = true;
+float screenShakeTimer = 0.0f;
+float screenShakeIntensity = 0.0f;
+
+int caineDeathSeqState = 0;
+float caineDeathSeqTimer = 0.0f;
+int caineDeathSeqTextLength = 0;
+float caineDeathSeqTextTimer = 0.0f;
+std::string caineDeathSeqDialogue = "Uh.. wait-";  // Edit this string to change Caine's death dialogue
+float deathSeqCamStartEyeX = 0.0f;
+float deathSeqCamStartEyeY = 0.0f;
+float deathSeqCamStartEyeZ = 0.0f;
+float deathSeqCamStartTargetX = 0.0f;
+float deathSeqCamStartTargetY = 0.0f;
+float deathSeqCamStartTargetZ = 0.0f;
+float currentCameraTargetX = 0.0f;
+float currentCameraTargetY = 0.0f;
+float currentCameraTargetZ = 0.0f;
+bool hasStartedDeathSeq = false;
+
+static void drawCenteredString(void* font, const char* str, float y, float left, float right);
 
 void drawCrosshair()
 {
+    glPushAttrib(GL_LIGHTING_BIT | GL_ENABLE_BIT | GL_CURRENT_BIT | GL_COLOR_BUFFER_BIT);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
     glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
@@ -150,7 +179,7 @@ void drawCrosshair()
     float cy = window.height / 2.0f;
     float size = 10.0f;
 
-    glColor3f(1.0f, 1.0f, 1.0f);
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     glBegin(GL_LINES);
         glVertex2f(cx - size, cy);
         glVertex2f(cx + size, cy);
@@ -158,13 +187,48 @@ void drawCrosshair()
         glVertex2f(cx, cy + size);
     glEnd();
 
+    // Draw Phase Transition Text above crosshair
+    if (myvirtualworld.isCaineActive && myvirtualworld.caine.isTransitioning)
+    {
+        float timer = myvirtualworld.caine.transitionTimer;
+        if (timer <= 2.0f)
+        {
+            float alpha = 0.0f;
+            if (timer <= 0.5f) {
+                alpha = timer / 0.5f;
+            } else if (timer <= 1.5f) {
+                alpha = 1.0f;
+            } else {
+                alpha = 1.0f - (timer - 1.5f) / 0.5f;
+            }
+
+            // Phase 2 color: Gold/Orange. Phase 3 color: Crimson Red.
+            if (myvirtualworld.caine.currentPhase == 2)
+            {
+                glColor4f(1.0f, 0.7f, 0.1f, alpha);
+            }
+            else if (myvirtualworld.caine.currentPhase == 3)
+            {
+                glColor4f(1.0f, 0.2f, 0.2f, alpha);
+            }
+            else
+            {
+                glColor4f(1.0f, 1.0f, 1.0f, alpha);
+            }
+
+            char phaseStr[32];
+            sprintf(phaseStr, "PHASE %d", myvirtualworld.caine.currentPhase);
+            drawCenteredString(GLUT_BITMAP_TIMES_ROMAN_24, phaseStr, cy + 30.0f, 0, window.width);
+        }
+    }
+
     glPopMatrix();
 
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
 
-    glEnable(GL_DEPTH_TEST);
+    glPopAttrib();
 }
 
 static void drawString(void* font, const char* str, float x, float y)
@@ -211,11 +275,19 @@ void drawHUD()
     float right = left + barWidth;
     float top = bottom + barHeight;
 
-    // Draw Health Bar Label
+    // Draw Health Bar & Ammo Labels
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     char kingerHealthText[64];
     sprintf(kingerHealthText, "KINGER  %d / %d", myvirtualworld.kinger.currentHealth, myvirtualworld.kinger.maxHealth);
     drawString(GLUT_BITMAP_HELVETICA_12, kingerHealthText, left, top + 6.0f);
+
+    char kingerAmmoText[64];
+    sprintf(kingerAmmoText, "Ammo: %d / %d", myvirtualworld.kinger.animation.currentAmmo, myvirtualworld.kinger.animation.MAX_AMMO);
+    drawString(GLUT_BITMAP_HELVETICA_12, kingerAmmoText, left, top + 20.0f);
+
+    char kingerHealText[64];
+    sprintf(kingerHealText, "Heal: %d/%d", myvirtualworld.kinger.animation.butterflyCharges, isDifficultyEasy ? 5 : 3);
+    drawString(GLUT_BITMAP_HELVETICA_12, kingerHealText, left, top + 34.0f);
 
     // Background Container
     glColor4f(0.08f, 0.08f, 0.12f, 0.7f);
@@ -309,6 +381,62 @@ void drawHUD()
     glColor4f(0.0f, 0.9f, 0.5f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "F", tipsLeft + 12.0f, startY - 4.0f * spacing);
     glColor4f(0.9f, 0.9f, 0.9f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "- Heal Skill", tipsLeft + 60.0f, startY - 4.0f * spacing);
 
+    if (isTestArena)
+    {
+        float taLeft = 30.0f;
+        float taTop = window.height - 30.0f;
+        float taWidth = 250.0f;
+        float taHeight = 115.0f;
+        float taRight = taLeft + taWidth;
+        float taBottom = taTop - taHeight;
+
+        // Background
+        glColor4f(0.08f, 0.08f, 0.12f, 0.7f);
+        glBegin(GL_QUADS);
+            glVertex2f(taLeft, taBottom);
+            glVertex2f(taRight, taBottom);
+            glVertex2f(taRight, taTop);
+            glVertex2f(taLeft, taTop);
+        glEnd();
+
+        // Border
+        glLineWidth(1.5f);
+        glColor4f(0.85f, 0.65f, 0.12f, 0.5f);
+        glBegin(GL_LINE_LOOP);
+            glVertex2f(taLeft, taBottom);
+            glVertex2f(taRight, taBottom);
+            glVertex2f(taRight, taTop);
+            glVertex2f(taLeft, taTop);
+        glEnd();
+
+        float taStartY = taTop - 15.0f;
+        float taSpacing = 18.0f;
+
+        // Title
+        glColor4f(1.0f, 0.84f, 0.0f, 1.0f); // Gold
+        drawString(GLUT_BITMAP_HELVETICA_12, "TEST ARENA CONTROLS", taLeft + 12.0f, taStartY);
+
+        taStartY -= 18.0f;
+        // Key 1
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "[1]", taLeft + 12.0f, taStartY);
+        glColor4f(0.9f, 0.9f, 0.9f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "Spawn Caine (Shoot & Move)", taLeft + 40.0f, taStartY);
+
+        // Key 2
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "[2]", taLeft + 12.0f, taStartY - taSpacing);
+        glColor4f(0.9f, 0.9f, 0.9f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "Spawn Caine (Sweep Attack)", taLeft + 40.0f, taStartY - taSpacing);
+
+        // Key 3
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "[3]", taLeft + 12.0f, taStartY - 2.0f * taSpacing);
+        glColor4f(0.9f, 0.9f, 0.9f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "Spawn Gloinks (Max 10)", taLeft + 40.0f, taStartY - 2.0f * taSpacing);
+
+        // Key 4
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "[4]", taLeft + 12.0f, taStartY - 3.0f * taSpacing);
+        glColor4f(0.9f, 0.9f, 0.9f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "Doctor Strange Clones Move", taLeft + 40.0f, taStartY - 3.0f * taSpacing);
+
+        // Key 5
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "[5]", taLeft + 12.0f, taStartY - 4.0f * taSpacing);
+        glColor4f(0.9f, 0.9f, 0.9f, 1.0f); drawString(GLUT_BITMAP_HELVETICA_10, "Meteor Attack Move", taLeft + 40.0f, taStartY - 4.0f * taSpacing);
+    }
 
     // ==========================================
     // 3. Caine Boss Health Bar (Top Center)
@@ -336,7 +464,7 @@ void drawHUD()
             glVertex2f(bossLeft, bossTop);
         glEnd();
 
-        // Fill (Vibrant Purple/Magenta representing Caine)
+        // Fill (Vibrant colors depending on Caine's current phase)
         float bossRatio = (float)myvirtualworld.caine.currentHealth / myvirtualworld.caine.maxHealth;
         if (bossRatio < 0.0f) bossRatio = 0.0f;
         if (bossRatio > 1.0f) bossRatio = 1.0f;
@@ -345,12 +473,27 @@ void drawHUD()
         if (bossRatio > 0.0f)
         {
             glBegin(GL_QUADS);
-                glColor4f(0.7f, 0.1f, 0.7f, 1.0f);
+                // Color dynamically shifts depending on Caine's current phase
+                float rStart = 0.7f, gStart = 0.1f, bStart = 0.7f; // Phase 1: Vibrant Purple
+                float rEnd = 0.95f, gEnd = 0.2f, bEnd = 0.95f;
+                
+                if (myvirtualworld.caine.currentPhase == 2) // Phase 2: Orange/Gold
+                {
+                    rStart = 0.9f; gStart = 0.3f; bStart = 0.0f;
+                    rEnd = 1.0f; gEnd = 0.6f; bEnd = 0.1f;
+                }
+                else if (myvirtualworld.caine.currentPhase == 3) // Phase 3: Crimson/Red
+                {
+                    rStart = 0.7f; gStart = 0.0f; bStart = 0.1f;
+                    rEnd = 0.95f; gEnd = 0.1f; bEnd = 0.2f;
+                }
+
+                glColor4f(rStart, gStart, bStart, 1.0f);
                 glVertex2f(bossLeft, bossBottom);
-                glColor4f(0.95f, 0.2f, 0.95f, 1.0f);
+                glColor4f(rEnd, gEnd, bEnd, 1.0f);
                 glVertex2f(bossFillRight, bossBottom);
                 glVertex2f(bossFillRight, bossTop);
-                glColor4f(0.7f, 0.1f, 0.7f, 1.0f);
+                glColor4f(rStart, gStart, bStart, 1.0f);
                 glVertex2f(bossLeft, bossTop);
             glEnd();
         }
@@ -381,87 +524,148 @@ void drawHUD()
         myvirtualworld.caine.animation.isLayingDown &&
         !myvirtualworld.caine.sweepActive)
     {
-        float sweepT = myvirtualworld.caine.sweepTimer;
-        float sweepI = myvirtualworld.caine.sweepInterval;
-        int   sweepDir = myvirtualworld.caine.nextSweepDirection; // pre-rolled upcoming direction
-
-        // Flash frequency increases as the attack approaches (1 Hz to 8 Hz)
-        float progress = (sweepI > 0.0f) ? (sweepT / sweepI) : 0.0f;
-        float flashFreq = 1.0f + progress * 7.0f;
-        // Smooth sine-wave pulse alpha (fades in/out, intensifies near strike)
-        float pulseAlpha = 0.25f + 0.5f * (0.5f + 0.5f * std::sin(sweepT * flashFreq * 2.0f * 3.14159265f));
-
-        float W = (float)window.width;
-        float H = (float)window.height;
-        float cx2 = W * 0.5f;
-        float cy2 = H * 0.5f;
-
-        // Triangle size
-        float triBase  = 120.0f; // half-width of the triangle base
-        float triDepth = 80.0f;  // how far the tip juts inward from the edge
-
-        // Edge padding (so the base sits right at the screen border)
-        float edgePad = 0.0f;
-
-        // Tip (pointing inward) and two base corners for each direction:
-        float tx = 0.0f, ty = 0.0f;   // tip
-        float b1x = 0.0f, b1y = 0.0f; // base corner 1
-        float b2x = 0.0f, b2y = 0.0f; // base corner 2
-
-        // Direction label position
-        float labelX = 0.0f, labelY = 0.0f;
-        const char* warningLabel = "! SWEEP !";
-
-        if (sweepDir == 0) // North -> South: wall comes from top of screen (Z negative = north in world)
+        int numWarnings = (myvirtualworld.caine.currentPhase == 3) ? 2 : 1;
+        for (int wIdx = 0; wIdx < numWarnings; wIdx++)
         {
-            // Arrow at top center pointing down
-            tx  = cx2;          ty  = H - edgePad - triDepth;
-            b1x = cx2 - triBase; b1y = H - edgePad;
-            b2x = cx2 + triBase; b2y = H - edgePad;
-            labelX = cx2 - 26.0f; labelY = H - edgePad - triDepth - 18.0f;
-        }
-        else if (sweepDir == 1) // South -> North: wall comes from bottom
-        {
-            tx  = cx2;          ty  = edgePad + triDepth;
-            b1x = cx2 - triBase; b1y = edgePad;
-            b2x = cx2 + triBase; b2y = edgePad;
-            labelX = cx2 - 26.0f; labelY = edgePad + triDepth + 6.0f;
-        }
-        else if (sweepDir == 2) // West -> East: wall comes from left
-        {
-            tx  = edgePad + triDepth; ty  = cy2;
-            b1x = edgePad;            b1y = cy2 - triBase;
-            b2x = edgePad;            b2y = cy2 + triBase;
-            labelX = edgePad + triDepth + 6.0f; labelY = cy2 + 6.0f;
-        }
-        else // East -> West: wall comes from right (sweepDir == 3)
-        {
-            tx  = W - edgePad - triDepth; ty  = cy2;
-            b1x = W - edgePad;            b1y = cy2 - triBase;
-            b2x = W - edgePad;            b2y = cy2 + triBase;
-            labelX = W - edgePad - triDepth - 50.0f; labelY = cy2 + 6.0f;
-        }
+            int sweepDir = (wIdx == 0) ? myvirtualworld.caine.nextSweepDirection : myvirtualworld.caine.nextSweepDirection2;
+            
+            float sweepT = myvirtualworld.caine.sweepTimer;
+            float sweepI = myvirtualworld.caine.sweepInterval;
 
-        // Draw filled triangle with additive-style blending for glow effect
-        glColor4f(1.0f, 0.08f, 0.08f, pulseAlpha);
-        glBegin(GL_TRIANGLES);
-            glVertex2f(tx,  ty);
-            glVertex2f(b1x, b1y);
-            glVertex2f(b2x, b2y);
+            // Flash frequency increases as the attack approaches (1 Hz to 8 Hz)
+            float progress = (sweepI > 0.0f) ? (sweepT / sweepI) : 0.0f;
+            float flashFreq = 1.0f + progress * 7.0f;
+            // Smooth sine-wave pulse alpha (fades in/out, intensifies near strike)
+            float pulseAlpha = 0.25f + 0.5f * (0.5f + 0.5f * std::sin(sweepT * flashFreq * 2.0f * 3.14159265f));
+
+            float W = (float)window.width;
+            float H = (float)window.height;
+            float cx2 = W * 0.5f;
+            float cy2 = H * 0.5f;
+
+            // Triangle size
+            float triBase  = 60.0f; // half-width of the triangle base
+            float triDepth = 40.0f; // how far the tip juts inward from the base
+            float radius   = std::min(W, H) * 0.25f; // base distance from screen center
+
+            // Compute threat direction unit vector (dx, dy) in screen coordinates
+            float dx = 0.0f;
+            float dy = 0.0f;
+            if (sweepDir == 0) // North
+            {
+                dx = std::sin(cameraYaw);
+                dy = std::cos(cameraYaw);
+            }
+            else if (sweepDir == 1) // South
+            {
+                dx = -std::sin(cameraYaw);
+                dy = -std::cos(cameraYaw);
+            }
+            else if (sweepDir == 2) // West
+            {
+                dx = -std::cos(cameraYaw);
+                dy = std::sin(cameraYaw);
+            }
+            else // East (sweepDir == 3)
+            {
+                dx = std::cos(cameraYaw);
+                dy = -std::sin(cameraYaw);
+            }
+
+            // Normalize threat direction vector to avoid floating point issues
+            float len = std::sqrt(dx * dx + dy * dy);
+            if (len > 0.0f)
+            {
+                dx /= len;
+                dy /= len;
+            }
+
+            // Base center of threat triangle
+            float bx = cx2 + radius * dx;
+            float by = cy2 + radius * dy;
+
+            // Tip pointing inwards (towards center)
+            float tx = cx2 + (radius - triDepth) * dx;
+            float ty = cy2 + (radius - triDepth) * dy;
+
+            // Base corners offset perpendicularly from base center (bx, by)
+            float b1x = bx - triBase * dy;
+            float b1y = by + triBase * dx;
+            float b2x = bx + triBase * dy;
+            float b2y = by - triBase * dx;
+
+            // Warning label text position (aligned outside the base, further away from center)
+            float labelDist = radius + 15.0f;
+            float lx = cx2 + labelDist * dx;
+            float ly = cy2 + labelDist * dy;
+            float labelX = lx - 26.0f;
+            float labelY = ly - 5.0f;
+            const char* warningLabel = "! SWEEP !";
+
+            // Draw filled triangle with additive-style blending for glow effect
+            glColor4f(1.0f, 0.08f, 0.08f, pulseAlpha);
+            glBegin(GL_TRIANGLES);
+                glVertex2f(tx,  ty);
+                glVertex2f(b1x, b1y);
+                glVertex2f(b2x, b2y);
+            glEnd();
+
+            // Draw bright red outline for crispness
+            glLineWidth(2.5f);
+            glColor4f(1.0f, 0.3f, 0.3f, pulseAlpha + 0.2f > 1.0f ? 1.0f : pulseAlpha + 0.2f);
+            glBegin(GL_LINE_LOOP);
+                glVertex2f(tx,  ty);
+                glVertex2f(b1x, b1y);
+                glVertex2f(b2x, b2y);
+            glEnd();
+
+            // Draw warning text label
+            glColor4f(1.0f, 1.0f, 0.2f, pulseAlpha + 0.2f > 1.0f ? 1.0f : pulseAlpha + 0.2f);
+            drawString(GLUT_BITMAP_HELVETICA_12, warningLabel, labelX, labelY);
+        }
+    }
+
+    // RPG Dialogue Box (Caine Death sequence States 2 & 3)
+    if (caineDeathSeqState == 2 || caineDeathSeqState == 3)
+    {
+        float boxW = 600.0f;
+        float boxH = 120.0f;
+        if (boxW > window.width * 0.9f) {
+            boxW = window.width * 0.9f;
+        }
+        float bLeft = (window.width - boxW) / 2.0f;
+        float bRight = bLeft + boxW;
+        float bBottom = 40.0f;
+        float bTop = bBottom + boxH;
+
+        // Draw solid black background
+        glColor4f(0.0f, 0.0f, 0.0f, 0.95f);
+        glBegin(GL_QUADS);
+            glVertex2f(bLeft, bBottom);
+            glVertex2f(bRight, bBottom);
+            glVertex2f(bRight, bTop);
+            glVertex2f(bLeft, bTop);
         glEnd();
 
-        // Draw bright red outline for crispness
-        glLineWidth(2.5f);
-        glColor4f(1.0f, 0.3f, 0.3f, pulseAlpha + 0.2f > 1.0f ? 1.0f : pulseAlpha + 0.2f);
+        // Draw thick white border
+        glLineWidth(4.0f);
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
         glBegin(GL_LINE_LOOP);
-            glVertex2f(tx,  ty);
-            glVertex2f(b1x, b1y);
-            glVertex2f(b2x, b2y);
+            glVertex2f(bLeft, bBottom);
+            glVertex2f(bRight, bBottom);
+            glVertex2f(bRight, bTop);
+            glVertex2f(bLeft, bTop);
         glEnd();
 
-        // Draw warning text label
-        glColor4f(1.0f, 1.0f, 0.2f, pulseAlpha + 0.2f > 1.0f ? 1.0f : pulseAlpha + 0.2f);
-        drawString(GLUT_BITMAP_HELVETICA_12, warningLabel, labelX, labelY);
+        // Draw title "Caine" in gold
+        glColor4f(1.0f, 0.84f, 0.0f, 1.0f); // Gold
+        drawString(GLUT_BITMAP_HELVETICA_18, "Caine", bLeft + 30.0f, bTop - 30.0f);
+
+        // Draw scrolled dialogue text in white
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        std::string fullText = caineDeathSeqDialogue;
+        std::string subText = (caineDeathSeqState == 3) ? fullText : fullText.substr(0, caineDeathSeqTextLength);
+        drawString(GLUT_BITMAP_HELVETICA_18, subText.c_str(), bLeft + 30.0f, bTop - 75.0f);
     }
 
     glPopMatrix();
@@ -524,7 +728,7 @@ void drawMenuUI()
         glEnd();
 
         float width = 450.0f;
-        float height = 320.0f;
+        float height = 360.0f;
         float left = cx - width / 2.0f;
         float right = cx + width / 2.0f;
         float top = cy + height / 2.0f;
@@ -584,8 +788,8 @@ void drawMenuUI()
         glEnd();
 
         // Options
-        float startY = top - 130.0f;
-        float spacing = 45.0f;
+        float startY = top - 120.0f;
+        float spacing = 40.0f;
 
         // Start Game
         glColor4f(0.0f, 0.9f, 0.5f, 1.0f);
@@ -599,11 +803,24 @@ void drawMenuUI()
         glColor4f(0.95f, 0.95f, 0.95f, 1.0f);
         drawString(GLUT_BITMAP_HELVETICA_18, "Debug Environment", left + 100.0f, startY - spacing);
 
+        // Test Arena
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "[3]", left + 60.0f, startY - 2.0f * spacing);
+        glColor4f(0.95f, 0.95f, 0.95f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "Test Arena", left + 100.0f, startY - 2.0f * spacing);
+
+        // Difficulty Setting
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "[4]", left + 60.0f, startY - 3.0f * spacing);
+        glColor4f(0.95f, 0.95f, 0.95f, 1.0f);
+        std::string diffText = "Difficulty: " + std::string(isDifficultyEasy ? "EASY" : "NORMAL");
+        drawString(GLUT_BITMAP_HELVETICA_18, diffText.c_str(), left + 100.0f, startY - 3.0f * spacing);
+
         // Exit Game
         glColor4f(1.0f, 0.3f, 0.3f, 1.0f);
-        drawString(GLUT_BITMAP_HELVETICA_18, "[0]", left + 60.0f, startY - 2.0f * spacing - 15.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "[0]", left + 60.0f, startY - 4.0f * spacing - 15.0f);
         glColor4f(0.90f, 0.90f, 0.90f, 1.0f);
-        drawString(GLUT_BITMAP_HELVETICA_18, "Exit Game", left + 100.0f, startY - 2.0f * spacing - 15.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "Exit Game", left + 100.0f, startY - 4.0f * spacing - 15.0f);
 
         // Footer
         glColor4f(0.6f, 0.6f, 0.6f, 0.7f);
@@ -685,7 +902,166 @@ void drawMenuUI()
         glColor4f(0.6f, 0.6f, 0.6f, 0.7f);
         drawCenteredString(GLUT_BITMAP_HELVETICA_12, "Press [ESC], [z], or [0] to Resume", bottom + 20.0f, left, right);
     }
-    else
+    else if (currentUIState == DEATH_SCREEN)
+    {
+        // 1. Draw Semi-transparent Full-Screen Red Tint Background
+        glColor4f(0.15f, 0.02f, 0.02f, 0.65f); // transparent dark red
+        glBegin(GL_QUADS);
+            glVertex2f(0.0f, 0.0f);
+            glVertex2f(window.width, 0.0f);
+            glVertex2f(window.width, window.height);
+            glVertex2f(0.0f, window.height);
+        glEnd();
+
+        float width = 400.0f;
+        float height = 250.0f;
+        float left = cx - width / 2.0f;
+        float right = cx + width / 2.0f;
+        float top = cy + height / 2.0f;
+        float bottom = cy - height / 2.0f;
+
+        // Background
+        glBegin(GL_QUADS);
+            glColor4f(0.25f, 0.02f, 0.04f, 0.9f); // Dark burgundy top
+            glVertex2f(left, top);
+            glVertex2f(right, top);
+            glColor4f(0.08f, 0.01f, 0.02f, 0.95f); // Pitch black-red bottom
+            glVertex2f(right, bottom);
+            glVertex2f(left, bottom);
+        glEnd();
+
+        // Sleek double gold border with pulse animation
+        float tTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+        float pulse = 0.85f + 0.15f * std::sin(tTime * 3.5f);
+
+        glLineWidth(3.0f);
+        glColor4f(0.85f * pulse, 0.65f * pulse, 0.12f * pulse, 0.9f); // gold pulse
+        glBegin(GL_LINE_LOOP);
+            glVertex2f(left, bottom);
+            glVertex2f(right, bottom);
+            glVertex2f(right, top);
+            glVertex2f(left, top);
+        glEnd();
+
+        glLineWidth(1.0f);
+        glColor4f(0.9f, 0.8f, 0.5f, 0.5f);
+        glBegin(GL_LINE_LOOP);
+            glVertex2f(left + 5.0f, bottom + 5.0f);
+            glVertex2f(right - 5.0f, bottom + 5.0f);
+            glVertex2f(right - 5.0f, top - 5.0f);
+            glVertex2f(left + 5.0f, top - 5.0f);
+        glEnd();
+
+        // Title
+        glColor4f(1.0f, 0.15f, 0.15f, 1.0f); // Ominous Red
+        drawCenteredString(GLUT_BITMAP_TIMES_ROMAN_24, "YOU DIED", top - 45.0f, left, right);
+
+        // Divider
+        glLineWidth(1.0f);
+        glColor4f(0.85f, 0.65f, 0.12f, 0.4f);
+        glBegin(GL_LINES);
+            glVertex2f(left + 30.0f, top - 65.0f);
+            glVertex2f(right - 30.0f, top - 65.0f);
+        glEnd();
+
+        // Options
+        float startY = top - 110.0f;
+        float spacing = 45.0f;
+
+        // Restart
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "[1]", left + 50.0f, startY);
+        glColor4f(0.95f, 0.95f, 0.95f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "Restart Game", left + 90.0f, startY);
+
+        // Return to Menu
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "[2]", left + 50.0f, startY - spacing);
+        glColor4f(0.95f, 0.95f, 0.95f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "Return to Main Menu", left + 90.0f, startY - spacing);
+
+        // Footer
+        glColor4f(0.6f, 0.6f, 0.6f, 0.7f);
+        drawCenteredString(GLUT_BITMAP_HELVETICA_12, "Press numeric keys to select an option", bottom + 25.0f, left, right);
+    }
+    else if (currentUIState == WIN_SCREEN)
+    {
+        // 1. Draw Semi-transparent Full-Screen Blue/Teal Tint Background
+        glColor4f(0.02f, 0.1f, 0.15f, 0.65f); // transparent dark teal/blue
+        glBegin(GL_QUADS);
+            glVertex2f(0.0f, 0.0f);
+            glVertex2f(window.width, 0.0f);
+            glVertex2f(window.width, window.height);
+            glVertex2f(0.0f, window.height);
+        glEnd();
+
+        float width = 450.0f;
+        float height = 280.0f;
+        float left = cx - width / 2.0f;
+        float right = cx + width / 2.0f;
+        float top = cy + height / 2.0f;
+        float bottom = cy - height / 2.0f;
+
+        // Background
+        glBegin(GL_QUADS);
+            glColor4f(0.02f, 0.25f, 0.2f, 0.9f); // Dark teal/emerald top
+            glVertex2f(left, top);
+            glVertex2f(right, top);
+            glColor4f(0.01f, 0.05f, 0.12f, 0.95f); // Deep midnight blue bottom
+            glVertex2f(right, bottom);
+            glVertex2f(left, bottom);
+        glEnd();
+
+        // Sleek double gold border with pulse animation
+        float tTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+        float pulse = 0.85f + 0.15f * std::sin(tTime * 3.5f);
+
+        glLineWidth(3.0f);
+        glColor4f(0.85f * pulse, 0.65f * pulse, 0.12f * pulse, 0.9f); // gold pulse
+        glBegin(GL_LINE_LOOP);
+            glVertex2f(left, bottom);
+            glVertex2f(right, bottom);
+            glVertex2f(right, top);
+            glVertex2f(left, top);
+        glEnd();
+
+        glLineWidth(1.0f);
+        glColor4f(0.9f, 0.8f, 0.5f, 0.5f);
+        glBegin(GL_LINE_LOOP);
+            glVertex2f(left + 5.0f, bottom + 5.0f);
+            glVertex2f(right - 5.0f, bottom + 5.0f);
+            glVertex2f(right - 5.0f, top - 5.0f);
+            glVertex2f(left + 5.0f, top - 5.0f);
+        glEnd();
+
+        // Title & Subtitle
+        glColor4f(0.0f, 1.0f, 0.6f, 1.0f); // Bright Teal/Emerald Green
+        drawCenteredString(GLUT_BITMAP_TIMES_ROMAN_24, "YOU WON", top - 45.0f, left, right);
+        glColor4f(0.85f, 0.75f, 0.5f, 0.9f); // Soft gold subtext
+        drawCenteredString(GLUT_BITMAP_HELVETICA_12, "You just killed Caine", top - 65.0f, left, right);
+
+        // Divider
+        glLineWidth(1.0f);
+        glColor4f(0.85f, 0.65f, 0.12f, 0.4f);
+        glBegin(GL_LINES);
+            glVertex2f(left + 30.0f, top - 80.0f);
+            glVertex2f(right - 30.0f, top - 80.0f);
+        glEnd();
+
+        // Options
+        float startY = top - 135.0f;
+
+        // Return to Menu
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "[1]", left + 60.0f, startY);
+        glColor4f(0.95f, 0.95f, 0.95f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "Return to Main Menu", left + 100.0f, startY);
+
+        // Footer
+        glColor4f(0.6f, 0.6f, 0.6f, 0.7f);
+        drawCenteredString(GLUT_BITMAP_HELVETICA_12, "Press [1] to select an option", bottom + 25.0f, left, right);
+    }
+    else if (currentUIState == GAMEPLAY)
     {
         // HUD Hint during Gameplay
         float width = 140.0f;
@@ -726,7 +1102,7 @@ void drawMenuUI()
 
 void updateKeyStatesFromWindows()
 {
-    if (currentUIState != GAMEPLAY)
+    if (currentUIState != GAMEPLAY || (caineDeathSeqState >= 1 && caineDeathSeqState <= 3))
     {
         keyStates['w'] = keyStates['W'] = false;
         keyStates['a'] = keyStates['A'] = false;
@@ -745,18 +1121,134 @@ void updateKeyStatesFromWindows()
 
 void myDisplayFunc(void)
 {
- glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
- 
- // Get player position and scale for camera calculations
- float& kX = myvirtualworld.kinger.posX;
- float& kZ = myvirtualworld.kinger.posZ;
- const float kScale = myvirtualworld.kinger.uniformScale;
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  
+  // Get player position and scale for camera calculations
+  float& kX = myvirtualworld.kinger.posX;
+  float& kZ = myvirtualworld.kinger.posZ;
+  const float kScale = myvirtualworld.kinger.uniformScale;
 
- static int lastTime = glutGet(GLUT_ELAPSED_TIME);
- int currentTime = glutGet(GLUT_ELAPSED_TIME);
- float deltaTime = (currentTime - lastTime) / 1000.0f;
- if (deltaTime > 0.1f) deltaTime = 0.1f;
- lastTime = currentTime;
+  static int lastTime = glutGet(GLUT_ELAPSED_TIME);
+  int currentTime = glutGet(GLUT_ELAPSED_TIME);
+  float deltaTime = (currentTime - lastTime) / 1000.0f;
+  if (deltaTime > 0.1f) deltaTime = 0.1f;
+  lastTime = currentTime;
+
+  // Game state checks: Death & Win
+  if (currentUIState == GAMEPLAY)
+  {
+      // Death Check: Kinger is dead and has finished his falling animation (1.0s delay)
+      if (myvirtualworld.kinger.animation.isDead && myvirtualworld.kinger.animation.deathTimer >= 1.0f)
+      {
+          currentUIState = DEATH_SCREEN;
+      }
+
+      // Win Check: Caine is dead in Phase 3 (Only when in Test Arena)
+      if (isTestArena && myvirtualworld.isCaineActive && myvirtualworld.caine.animation.isDead && myvirtualworld.caine.currentPhase == 3)
+      {
+          if (!isWinDelayed)
+          {
+              isWinDelayed = true;
+              winDelayTimer = 0.0f;
+              // Clear all Gloinks
+              myvirtualworld.gloinks.animation.activeGloinks.clear();
+              // Clear all Caine projectiles
+              for (int i = 0; i < myvirtualworld.caine.MAX_CAINE_PROJECTILES; i++)
+              {
+                  myvirtualworld.caine.projectiles[i].active = false;
+              }
+              // Clear Kinger bullets
+              myvirtualworld.kinger.animation.isBulletActive = false;
+          }
+          
+          winDelayTimer += deltaTime;
+          if (winDelayTimer >= 5.0f)
+          {
+              currentUIState = WIN_SCREEN;
+              isWinDelayed = false;
+          }
+      }
+  }
+
+  // Cutscene State Machine Update
+  if (currentUIState == GAMEPLAY && caineDeathSeqState > 0)
+  {
+      caineDeathSeqTimer += deltaTime;
+      if (caineDeathSeqState == 1)
+      {
+          if (!hasStartedDeathSeq)
+          {
+              hasStartedDeathSeq = true;
+              deathSeqCamStartEyeX = currentCameraEyeX;
+              deathSeqCamStartEyeY = currentCameraEyeY;
+              deathSeqCamStartEyeZ = currentCameraEyeZ;
+              deathSeqCamStartTargetX = currentCameraTargetX;
+              deathSeqCamStartTargetY = currentCameraTargetY;
+              deathSeqCamStartTargetZ = currentCameraTargetZ;
+
+              // Clear Gloinks and projectiles
+              myvirtualworld.isGloinksActive = false;
+              myvirtualworld.gloinks.animation.activeGloinks.clear();
+              for (int i = 0; i < myvirtualworld.caine.MAX_CAINE_PROJECTILES; i++)
+              {
+                  myvirtualworld.caine.projectiles[i].active = false;
+              }
+              myvirtualworld.kinger.animation.isBulletActive = false;
+          }
+
+          if (caineDeathSeqTimer >= 1.0f)
+          {
+              caineDeathSeqState = 2;
+              caineDeathSeqTimer = 0.0f;
+              caineDeathSeqTextLength = 0;
+              caineDeathSeqTextTimer = 0.0f;
+          }
+      }
+      else if (caineDeathSeqState == 2)
+      {
+          caineDeathSeqTextTimer += deltaTime;
+          int targetLen = static_cast<int>(caineDeathSeqTextTimer / 0.08f);
+          const std::string dialogueText = caineDeathSeqDialogue;
+          if (targetLen > (int)dialogueText.length())
+          {
+              targetLen = (int)dialogueText.length();
+          }
+          caineDeathSeqTextLength = targetLen;
+
+          if (caineDeathSeqTextLength >= (int)dialogueText.length())
+          {
+              caineDeathSeqState = 3;
+              caineDeathSeqTimer = 0.0f;
+          }
+      }
+      else if (caineDeathSeqState == 3)
+      {
+          if (caineDeathSeqTimer >= 5.0f)
+          {
+              caineDeathSeqState = 4;
+              caineDeathSeqTimer = 0.0f;
+              deathSeqCamStartEyeX = currentCameraEyeX;
+              deathSeqCamStartEyeY = currentCameraEyeY;
+              deathSeqCamStartEyeZ = currentCameraEyeZ;
+              deathSeqCamStartTargetX = currentCameraTargetX;
+              deathSeqCamStartTargetY = currentCameraTargetY;
+              deathSeqCamStartTargetZ = currentCameraTargetZ;
+          }
+      }
+      else if (caineDeathSeqState == 4)
+      {
+          if (caineDeathSeqTimer >= 5.0f)
+          {
+              caineDeathSeqState = 5;
+              caineDeathSeqTimer = 0.0f;
+              currentUIState = WIN_SCREEN;
+          }
+      }
+  }
+  else
+  {
+      hasStartedDeathSeq = false;
+  }
  
  // Smoothly follow the player's Y position
  cameraTrackY += (myvirtualworld.kinger.posY - cameraTrackY) * CAMERA_FOLLOW_SPEED * deltaTime;
@@ -816,6 +1308,17 @@ void myDisplayFunc(void)
       if (tMinZ < t) t = tMinZ;
   }
 
+  // Clamp camera above the floor plane (Y = -18.7f) with a small margin
+  {
+      const float floorY = -18.7f + margin;
+      // Ray: eyeY = baseTargetY + t * vy. Solve for t when eyeY == floorY.
+      if (vy < -0.001f)
+      {
+          float tFloor = (floorY - baseTargetY) / vy;
+          if (tFloor > 0.0f && tFloor < t) t = tFloor;
+      }
+  }
+
   if (t < 0.1f) t = 0.1f;
 
   // The camera's final world position, zoomed in if close to the circus walls
@@ -823,42 +1326,173 @@ void myDisplayFunc(void)
   float eyeY = baseTargetY + t * vy;
   float eyeZ = targetZ + t * vz;
 
- const float GROUND_LEVEL = myvirtualworld.kinger.posY;
- if (eyeY < GROUND_LEVEL + 1.0f)
- {
-     eyeY = GROUND_LEVEL + 1.0f;
- }
+  // Record normal target variables
+  currentCameraTargetX = targetX;
+  currentCameraTargetY = baseTargetY;
+  currentCameraTargetZ = targetZ;
 
- // Record camera position to global variables
- currentCameraEyeX = eyeX;
- currentCameraEyeY = eyeY;
- currentCameraEyeZ = eyeZ;
+  float drawEyeX = eyeX;
+  float drawEyeY = eyeY;
+  float drawEyeZ = eyeZ;
+  float drawTargetX = targetX;
+  float drawTargetY = baseTargetY;
+  float drawTargetZ = targetZ;
 
- // Calculate and record camera look direction to global variables
- float dx = targetX - eyeX;
- float dy = baseTargetY - eyeY;
- float dz = targetZ - eyeZ;
- float len = std::sqrt(dx * dx + dy * dy + dz * dz);
- if (len > 0.0f)
- {
-     currentCameraDirX = dx / len;
-     currentCameraDirY = dy / len;
-     currentCameraDirZ = dz / len;
- }
- else
- {
-     currentCameraDirX = -std::sin(cameraYaw) * std::cos(cameraPitch);
-     currentCameraDirY = -std::sin(cameraPitch);
-     currentCameraDirZ = -std::cos(cameraYaw) * std::cos(cameraPitch);
- }
+  if (caineDeathSeqState >= 1 && caineDeathSeqState <= 4)
+  {
+      ProjectCaine::Caine& boss = myvirtualworld.caine;
+      Vec3 caineCenter = boss.getCaineWorldCenter();
+      
+      // Calculate normalized direction from State 1 start to Caine's center
+      float sdx = caineCenter.x - deathSeqCamStartEyeX;
+      float sdy = caineCenter.y - deathSeqCamStartEyeY;
+      float sdz = caineCenter.z - deathSeqCamStartEyeZ;
+      float slen = std::sqrt(sdx*sdx + sdy*sdy + sdz*sdz);
+      float zoomDirX = 0.0f, zoomDirY = 0.0f, zoomDirZ = 1.0f;
+      if (slen > 0.0f)
+      {
+          zoomDirX = sdx / slen;
+          zoomDirY = sdy / slen;
+          zoomDirZ = sdz / slen;
+      }
 
- glMatrixMode(GL_MODELVIEW);
- glLoadIdentity();
- gluLookAt(
-     eyeX,    eyeY,        eyeZ,
-     targetX, baseTargetY, targetZ, 
-     0.0f,    1.0f,        0.0f 
- );
+      float destEyeX = caineCenter.x - zoomDirX * 45.0f;
+      float destEyeY = caineCenter.y - zoomDirY * 45.0f;
+      float destEyeZ = caineCenter.z - zoomDirZ * 45.0f;
+
+      if (caineDeathSeqState == 1)
+      {
+          float t_val = caineDeathSeqTimer / 1.0f;
+          if (t_val > 1.0f) t_val = 1.0f;
+          float smoothT = t_val * t_val * (3.0f - 2.0f * t_val);
+
+          drawEyeX = deathSeqCamStartEyeX + (destEyeX - deathSeqCamStartEyeX) * smoothT;
+          drawEyeY = deathSeqCamStartEyeY + (destEyeY - deathSeqCamStartEyeY) * smoothT;
+          drawEyeZ = deathSeqCamStartEyeZ + (destEyeZ - deathSeqCamStartEyeZ) * smoothT;
+
+          // Interpolate view direction vector from starting camera direction to zoomDir
+          float startDirX = deathSeqCamStartTargetX - deathSeqCamStartEyeX;
+          float startDirY = deathSeqCamStartTargetY - deathSeqCamStartEyeY;
+          float startDirZ = deathSeqCamStartTargetZ - deathSeqCamStartEyeZ;
+          float startLen = std::sqrt(startDirX*startDirX + startDirY*startDirY + startDirZ*startDirZ);
+          if (startLen > 0.0f)
+          {
+              startDirX /= startLen;
+              startDirY /= startLen;
+              startDirZ /= startLen;
+          }
+          else
+          {
+              startDirX = zoomDirX; startDirY = zoomDirY; startDirZ = zoomDirZ;
+          }
+
+          float curDirX = startDirX + (zoomDirX - startDirX) * smoothT;
+          float curDirY = startDirY + (zoomDirY - startDirY) * smoothT;
+          float curDirZ = startDirZ + (zoomDirZ - startDirZ) * smoothT;
+          float curDirLen = std::sqrt(curDirX*curDirX + curDirY*curDirY + curDirZ*curDirZ);
+          if (curDirLen > 0.0f)
+          {
+              curDirX /= curDirLen;
+              curDirY /= curDirLen;
+              curDirZ /= curDirLen;
+          }
+
+          float lookDist = 100.0f;
+          drawTargetX = drawEyeX + curDirX * lookDist;
+          drawTargetY = drawEyeY + curDirY * lookDist;
+          drawTargetZ = drawEyeZ + curDirZ * lookDist;
+      }
+      else if (caineDeathSeqState == 2 || caineDeathSeqState == 3)
+      {
+          drawEyeX = destEyeX;
+          drawEyeY = destEyeY;
+          drawEyeZ = destEyeZ;
+
+          drawTargetX = caineCenter.x;
+          drawTargetY = caineCenter.y;
+          drawTargetZ = caineCenter.z;
+      }
+      else if (caineDeathSeqState == 4)
+      {
+          float t_val = caineDeathSeqTimer / 1.0f;
+          if (t_val > 1.0f) t_val = 1.0f;
+          float smoothT = t_val * t_val * (3.0f - 2.0f * t_val);
+
+          drawEyeX = deathSeqCamStartEyeX + (eyeX - deathSeqCamStartEyeX) * smoothT;
+          drawEyeY = deathSeqCamStartEyeY + (eyeY - deathSeqCamStartEyeY) * smoothT;
+          drawEyeZ = deathSeqCamStartEyeZ + (eyeZ - deathSeqCamStartEyeZ) * smoothT;
+
+          // Interpolate view direction vector from zoomDir to normal follow look vector
+          float fdx = targetX - eyeX;
+          float fdy = baseTargetY - eyeY;
+          float fdz = targetZ - eyeZ;
+          float flen = std::sqrt(fdx*fdx + fdy*fdy + fdz*fdz);
+          float followDirX = 0.0f, followDirY = 0.0f, followDirZ = 1.0f;
+          if (flen > 0.0f)
+          {
+              followDirX = fdx / flen;
+              followDirY = fdy / flen;
+              followDirZ = fdz / flen;
+          }
+
+          float curDirX = zoomDirX + (followDirX - zoomDirX) * smoothT;
+          float curDirY = zoomDirY + (followDirY - zoomDirY) * smoothT;
+          float curDirZ = zoomDirZ + (followDirZ - zoomDirZ) * smoothT;
+          float curDirLen = std::sqrt(curDirX*curDirX + curDirY*curDirY + curDirZ*curDirZ);
+          if (curDirLen > 0.0f)
+          {
+              curDirX /= curDirLen;
+              curDirY /= curDirLen;
+              curDirZ /= curDirLen;
+          }
+
+          float lookDist = 100.0f;
+          drawTargetX = drawEyeX + curDirX * lookDist;
+          drawTargetY = drawEyeY + curDirY * lookDist;
+          drawTargetZ = drawEyeZ + curDirZ * lookDist;
+      }
+  }
+
+  // Record camera position to global variables
+  currentCameraEyeX = drawEyeX;
+  currentCameraEyeY = drawEyeY;
+  currentCameraEyeZ = drawEyeZ;
+
+  // Calculate and record camera look direction to global variables
+  float dx = drawTargetX - drawEyeX;
+  float dy = drawTargetY - drawEyeY;
+  float dz = drawTargetZ - drawEyeZ;
+  float len = std::sqrt(dx * dx + dy * dy + dz * dz);
+  if (len > 0.0f)
+  {
+      currentCameraDirX = dx / len;
+      currentCameraDirY = dy / len;
+      currentCameraDirZ = dz / len;
+  }
+  else
+  {
+      currentCameraDirX = -std::sin(cameraYaw) * std::cos(cameraPitch);
+      currentCameraDirY = -std::sin(cameraPitch);
+      currentCameraDirZ = -std::cos(cameraYaw) * std::cos(cameraPitch);
+  }
+
+  float shakeX = 0.0f;
+  float shakeY = 0.0f;
+  float shakeZ = 0.0f;
+  if (screenShakeTimer > 0.0f)
+  {
+      shakeX = (-1.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 2.0f)) * screenShakeIntensity;
+      shakeY = (-1.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 2.0f)) * screenShakeIntensity;
+      shakeZ = (-1.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 2.0f)) * screenShakeIntensity;
+  }
+
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
+  gluLookAt(
+      drawEyeX + shakeX,    drawEyeY + shakeY,        drawEyeZ + shakeZ,
+      drawTargetX + shakeX, drawTargetY + shakeY, drawTargetZ + shakeZ, 
+      0.0f,    1.0f,        0.0f 
+  );
 
  glPushMatrix();
 
@@ -876,9 +1510,12 @@ void myDisplayFunc(void)
  glFlush();
  glutSwapBuffers();
 
- updateKeyStatesFromWindows();
- myvirtualworld.tickTime(cameraYaw, cameraPitch, keyStates);
- glutPostRedisplay();
+  updateKeyStatesFromWindows();
+  if (currentUIState == GAMEPLAY)
+  {
+      myvirtualworld.tickTime(cameraYaw, cameraPitch, keyStates);
+  }
+  glutPostRedisplay();
 }
 
 void myReshapeFunc(int width, int height)
@@ -890,6 +1527,35 @@ void myReshapeFunc(int width, int height)
 
 void myKeyboardFunc(unsigned char key, int x, int y)
 {
+  // Intercept keyboard actions in Death Screen
+  if (currentUIState == DEATH_SCREEN)
+  {
+      if (key == '1')
+      {
+          myvirtualworld.startGame();
+          currentUIState = GAMEPLAY;
+      }
+      else if (key == '2')
+      {
+          myvirtualworld.resetGame();
+          currentUIState = START_MENU;
+      }
+      glutPostRedisplay();
+      return;
+  }
+
+  // Intercept keyboard actions in Win Screen
+  if (currentUIState == WIN_SCREEN)
+  {
+      if (key == '1')
+      {
+          myvirtualworld.resetGame();
+          currentUIState = START_MENU;
+      }
+      glutPostRedisplay();
+      return;
+  }
+
   // Toggle menu with 'z', 'Z' or ESC (27)
   if (key == 'z' || key == 'Z' || key == 27)
   {
@@ -919,17 +1585,30 @@ void myKeyboardFunc(unsigned char key, int x, int y)
   {
       switch (key)
       {
-          case '1':
-              myvirtualworld.startGame();
-              currentUIState = GAMEPLAY;
-              break;
-          case '2':
-              myvirtualworld.debugEnvironment();
-              currentUIState = GAMEPLAY;
-              break;
-          case '0':
-              exit(0);
-              break;
+            case '1':
+                isTestArena = false;
+                myvirtualworld.startGame();
+                currentUIState = GAMEPLAY;
+                break;
+            case '2':
+                isTestArena = false;
+                myvirtualworld.debugEnvironment();
+                currentUIState = GAMEPLAY;
+                break;
+            case '3':
+                isTestArena = true;
+                myvirtualworld.resetGame();
+                isTestArena = true; // resetGame sets isTestArena = false, so force it back
+                myvirtualworld.isCaineActive = false;
+                myvirtualworld.isGloinksActive = false;
+                currentUIState = GAMEPLAY;
+                break;
+            case '4':
+                isDifficultyEasy = !isDifficultyEasy;
+                break;
+            case '0':
+                exit(0);
+                break;
       }
       glutPostRedisplay();
       return;
@@ -940,17 +1619,24 @@ void myKeyboardFunc(unsigned char key, int x, int y)
   {
       switch (key)
       {
-          case '1':
-              if (myvirtualworld.isDebugMode)
-              {
-                  myvirtualworld.debugEnvironment();
-              }
-              else
-              {
-                  myvirtualworld.startGame();
-              }
-              currentUIState = GAMEPLAY;
-              break;
+           case '1':
+               if (isTestArena)
+               {
+                   myvirtualworld.resetGame();
+                   isTestArena = true; // resetGame sets isTestArena = false, so force it back
+                   myvirtualworld.isCaineActive = false;
+                   myvirtualworld.isGloinksActive = false;
+               }
+               else if (myvirtualworld.isDebugMode)
+               {
+                   myvirtualworld.debugEnvironment();
+               }
+               else
+               {
+                   myvirtualworld.startGame();
+               }
+               currentUIState = GAMEPLAY;
+               break;
           case '2':
               myvirtualworld.resetGame();
               currentUIState = START_MENU;
@@ -960,6 +1646,12 @@ void myKeyboardFunc(unsigned char key, int x, int y)
               break;
       }
       glutPostRedisplay();
+      return;
+  }
+
+  // Intercept keyboard actions during Caine death sequence
+  if (caineDeathSeqState >= 1 && caineDeathSeqState <= 3)
+  {
       return;
   }
 
@@ -1013,21 +1705,124 @@ void myKeyboardFunc(unsigned char key, int x, int y)
          break;
 
      // Caine Hand Animation Trigger & Gloink Hurt Triggers (Only active in Debug Environment)
-     case '1':
-         if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(0);
-         break;
-     case '2':
-         if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(1);
-         break;
-     case '3':
-         if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(2);
-         break;
-     case '4':
-         if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(3);
-         break;
-     case '5':
-         if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(4);
-         break;
+      case '1':
+          if (isTestArena)
+          {
+              myvirtualworld.environment.resetMeteors();
+              myvirtualworld.isCaineActive = true;
+              myvirtualworld.isGloinksActive = false;
+              myvirtualworld.gloinks.animation.activeGloinks.clear();
+              myvirtualworld.caine.animation.isLayingDown = false;
+              myvirtualworld.caine.animation.layDownFactor = 0.0f;
+              myvirtualworld.caine.sweepActive = false;
+              myvirtualworld.caine.animation.isLaughing = false;
+              myvirtualworld.caine.currentHealth = myvirtualworld.caine.maxHealth;
+              myvirtualworld.caine.animation.isDead = false;
+              myvirtualworld.caine.animation.deathTimer = 0.0f;
+              myvirtualworld.caine.testArenaSweepMode = false;
+              myvirtualworld.caine.doctorStrangeState = 0;
+          }
+          else if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(0);
+          break;
+      case '2':
+          if (isTestArena)
+          {
+              myvirtualworld.environment.resetMeteors();
+              myvirtualworld.isCaineActive = true;
+              myvirtualworld.isGloinksActive = false;
+              myvirtualworld.gloinks.animation.activeGloinks.clear();
+              myvirtualworld.caine.animation.isLayingDown = true;
+              myvirtualworld.caine.animation.isLaughing = true;
+              myvirtualworld.caine.animation.layDownFactor = 1.0f;
+              myvirtualworld.caine.sweepActive = true;
+              myvirtualworld.caine.sweepDirection = rand() % 4;
+              myvirtualworld.caine.sweepCurrentPos = (myvirtualworld.caine.sweepDirection == 0 || myvirtualworld.caine.sweepDirection == 2) ? -290.0f : 290.0f;
+              myvirtualworld.caine.sweepTimer = 0.0f;
+              myvirtualworld.caine.sweepInterval = 2.0f;
+              myvirtualworld.caine.nextSweepDirection = rand() % 4;
+              myvirtualworld.caine.currentHealth = myvirtualworld.caine.maxHealth;
+              myvirtualworld.caine.animation.isDead = false;
+              myvirtualworld.caine.animation.deathTimer = 0.0f;
+              myvirtualworld.caine.testArenaSweepMode = true;
+              myvirtualworld.caine.doctorStrangeState = 0;
+          }
+          else if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(1);
+          break;
+      case '3':
+          if (isTestArena)
+          {
+              myvirtualworld.environment.resetMeteors();
+              myvirtualworld.isCaineActive = false;
+              myvirtualworld.isGloinksActive = true;
+              myvirtualworld.gloinks.animation.activeGloinks.clear();
+              for (int i = 0; i < myvirtualworld.caine.MAX_CAINE_PROJECTILES; i++)
+              {
+                  myvirtualworld.caine.projectiles[i].active = false;
+              }
+              // Reset Caine to spawn
+              myvirtualworld.caine.posX = 0.0f;
+              myvirtualworld.caine.posY = 0.0f;
+              myvirtualworld.caine.posZ = -120.0f;
+              myvirtualworld.caine.doctorStrangeState = 0;
+          }
+          else if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(2);
+          break;
+      case '4':
+          if (isTestArena)
+          {
+              myvirtualworld.environment.resetMeteors();
+              myvirtualworld.isCaineActive = true;
+              myvirtualworld.isGloinksActive = false;
+              myvirtualworld.gloinks.animation.activeGloinks.clear();
+              
+              myvirtualworld.caine.doctorStrangeState = 1;
+              myvirtualworld.caine.doctorStrangeTimer = 0.0f;
+              myvirtualworld.caine.particleSpawnTimer = 0.0f;
+              myvirtualworld.caine.currentHealth = myvirtualworld.caine.maxHealth;
+              myvirtualworld.caine.animation.isDead = false;
+              myvirtualworld.caine.animation.deathTimer = 0.0f;
+              myvirtualworld.caine.animation.isLayingDown = false;
+              myvirtualworld.caine.animation.layDownFactor = 0.0f;
+              myvirtualworld.caine.sweepActive = false;
+              myvirtualworld.caine.animation.isLaughing = false;
+              myvirtualworld.caine.testArenaSweepMode = false;
+              
+              // Clear active Caine projectiles
+              for (int i = 0; i < myvirtualworld.caine.MAX_CAINE_PROJECTILES; i++)
+              {
+                  myvirtualworld.caine.projectiles[i].active = false;
+              }
+              // Spawn initial teleport poof at current location
+              myvirtualworld.caine.spawnTeleportPoof(myvirtualworld.caine.posX, myvirtualworld.caine.posY, myvirtualworld.caine.posZ);
+          }
+          else if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(3);
+          break;
+      case '5':
+          if (isTestArena)
+          {
+              myvirtualworld.isCaineActive = true;
+              myvirtualworld.isGloinksActive = false;
+              myvirtualworld.gloinks.animation.activeGloinks.clear();
+              myvirtualworld.caine.animation.isLayingDown = false;
+              myvirtualworld.caine.animation.layDownFactor = 0.0f;
+              myvirtualworld.caine.sweepActive = false;
+              myvirtualworld.caine.animation.isLaughing = false;
+              myvirtualworld.caine.currentHealth = myvirtualworld.caine.maxHealth;
+              myvirtualworld.caine.animation.isDead = false;
+              myvirtualworld.caine.animation.deathTimer = 0.0f;
+              myvirtualworld.caine.testArenaSweepMode = false;
+              myvirtualworld.caine.doctorStrangeState = 0;
+              
+              // Clear active Caine projectiles
+              for (int i = 0; i < myvirtualworld.caine.MAX_CAINE_PROJECTILES; i++)
+              {
+                  myvirtualworld.caine.projectiles[i].active = false;
+              }
+              
+              myvirtualworld.environment.isMeteorModeActive = true;
+          }
+          else if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(4);
+          break;
      case '6':
          if (myvirtualworld.isDebugMode) myvirtualworld.gloinks.hurtGloink(5);
          break;
@@ -1092,14 +1887,14 @@ void myPassiveMotionFunc(int x, int y)
  int centerX = window.width  / 2;
  int centerY = window.height / 2;
 
- if (currentUIState != GAMEPLAY)
- {
-     if (x != centerX || y != centerY)
-     {
-         glutWarpPointer(centerX, centerY);
-     }
-     return;
- }
+  if (currentUIState != GAMEPLAY || (caineDeathSeqState >= 1 && caineDeathSeqState <= 3))
+  {
+      if (x != centerX || y != centerY)
+      {
+          glutWarpPointer(centerX, centerY);
+      }
+      return;
+  }
 
  if (x == centerX && y == centerY)
      return;
@@ -1121,7 +1916,7 @@ void myPassiveMotionFunc(int x, int y)
 
 void myMouseFunc(int button, int state, int x, int y)
 {
-    if (currentUIState != GAMEPLAY)
+    if (currentUIState != GAMEPLAY || (caineDeathSeqState >= 1 && caineDeathSeqState <= 3))
         return;
 
     switch (button)
@@ -1227,85 +2022,168 @@ void myLightingInit()
  glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
  glEnable(GL_COLOR_MATERIAL);
 
- glMaterialfv(GL_FRONT, GL_SPECULAR, specref);
- glMateriali(GL_FRONT, GL_SHININESS, shininess);
+  glMaterialfv(GL_FRONT, GL_SPECULAR, specref);
+  glMateriali(GL_FRONT, GL_SHININESS, shininess);
 
- glEnable(GL_NORMALIZE);
+  glEnable(GL_NORMALIZE);
+}
+
+void enableConsoleANSI();
+void initLoadingScreen();
+void updateLoadingProgress(const std::string& action, const std::string& itemName);
+
+int currentLoadStep = 0;
+const int totalLoadSteps = 85;
+
+#ifdef _WIN32
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+#endif
+
+void enableConsoleANSI()
+{
+#ifdef _WIN32
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut != INVALID_HANDLE_VALUE)
+    {
+        DWORD dwMode = 0;
+        if (GetConsoleMode(hOut, &dwMode))
+        {
+            dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            SetConsoleMode(hOut, dwMode);
+        }
+    }
+#endif
+}
+
+void initLoadingScreen()
+{
+    enableConsoleANSI();
+    currentLoadStep = 0;
+    // Clear screen
+    std::cout << "\033[2J\033[H";
+    std::cout << "=================================================================\n";
+    std::cout << "*                  THE AMAZING DIGITAL CIRCUS                   *\n";
+    std::cout << "*                       L O A D I N G . . .                     *\n";
+    std::cout << "=================================================================\n\n";
+    std::cout << "  Progress: [>                                       ] 0%\n\n";
+    std::cout << "  Initializing systems...\n\n";
+    std::cout << "=================================================================\n";
+    std::cout.flush();
+}
+
+void updateLoadingProgress(const std::string& action, const std::string& itemName)
+{
+    currentLoadStep++;
+    if (currentLoadStep > totalLoadSteps) currentLoadStep = totalLoadSteps;
+
+    float percent = (float)currentLoadStep / totalLoadSteps * 100.0f;
+    int barWidth = 40;
+    int pos = (int)(barWidth * ((float)currentLoadStep / totalLoadSteps));
+
+    // Reset cursor to top-left (no screen flicker)
+    std::cout << "\033[H";
+
+    std::cout << "=================================================================\n";
+    std::cout << "*                  THE AMAZING DIGITAL CIRCUS                   *\n";
+    std::cout << "*                       L O A D I N G . . .                     *\n";
+    std::cout << "=================================================================\n\n";
+
+    std::cout << "  Progress: [";
+    for (int i = 0; i < barWidth; ++i) {
+        if (i < pos) std::cout << "=";
+        else if (i == pos) std::cout << ">";
+        else std::cout << " ";
+    }
+    std::cout << "] " << (int)percent << "%\n\n";
+
+    std::cout << "  " << action << ": \033[K" << itemName << "\n\n";
+    std::cout << "=================================================================\n";
+    std::cout.flush();
 }
 
 void myInit()
 {
- myDataInit();
+  myDataInit();
 
- glutInitDisplayMode( GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH );
- glutInitWindowPosition(window.posX, window.posY); // Set top-left position
- glutInitWindowSize(window.width, window.height); //Set width and height
- glutCreateWindow(window.title.c_str());// Create display window
+  glutInitDisplayMode( GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH );
+  glutInitWindowPosition(window.posX, window.posY); // Set top-left position
+  glutInitWindowSize(window.width, window.height); //Set width and height
+  glutCreateWindow(window.title.c_str());// Create display window
 
- glutDisplayFunc(myDisplayFunc);
- glutReshapeFunc(myReshapeFunc);
- glutKeyboardFunc(myKeyboardFunc);
- glutSpecialFunc(mySpecialFunc);
- glutMotionFunc(myMotionFunc);
- glutMouseFunc(myMouseFunc);
- glutPassiveMotionFunc(myPassiveMotionFunc); // mouse-look without button
- glutSetCursor(GLUT_CURSOR_NONE);            // hide cursor for immersive look
+  glutDisplayFunc(myDisplayFunc);
+  glutReshapeFunc(myReshapeFunc);
+  glutKeyboardFunc(myKeyboardFunc);
+  glutSpecialFunc(mySpecialFunc);
+  glutMotionFunc(myMotionFunc);
+  glutMouseFunc(myMouseFunc);
+  glutPassiveMotionFunc(myPassiveMotionFunc); // mouse-look without button
+  glutSetCursor(GLUT_CURSOR_NONE);            // hide cursor for immersive look
 
- glPointSize(4.0);
- glEnable(GL_DEPTH_TEST);
- glDepthFunc(GL_LESS);
- glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
- glFrontFace(GL_CCW);
- glShadeModel (GL_SMOOTH);
- glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
- glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+  glPointSize(4.0);
+  glEnable(GL_DEPTH_TEST);
+  glDepthFunc(GL_LESS);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  glFrontFace(GL_CCW);
+  glShadeModel (GL_SMOOTH);
+  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+  glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
- glEnable(GL_CULL_FACE);
+  glEnable(GL_CULL_FACE);
 
- myViewingInit();
+  myViewingInit();
 
- myLightingInit();
+  myLightingInit();
 
+  initLoadingScreen();
   myvirtualworld.init();
+
+  // Clear screen and print control info when loading finishes
+  #ifdef _WIN32
+  system("cls");
+  #else
+  std::cout << "\033[2J\033[H";
+  #endif
+  myWelcome();
+
   myvirtualworld.resetGame();
 }
 
 void myWelcome()
 {
- cout << "*****************************************************************\n";
- cout << "*                   TCG6223 Computer Graphics                   *\n";
- cout << "*                  FIST, Multimedia University                  *\n";
- cout << "*****************************************************************\n";
- cout << "| TPS Controls:                                                 |\n";
- cout << "|   <w>,<s>             => move Kinger forward / backward       |\n";
- cout << "|   <a>,<d>             => strafe Kinger left / right           |\n";
- cout << "|   <f>                 => cast heal skill                      |\n";
- cout << "|   <c>                 => roll                                 |\n";
- cout << "|   Mouse (move)        => rotate camera (yaw + pitch)          |\n";
- cout << "|   Arrow UP/DOWN       => camera pitch (keyboard fallback)     |\n";
- cout << "|   Arrow LEFT/RIGHT    => camera yaw   (keyboard fallback)     |\n";
- cout << "|   SPACE               => jump                                 |\n";
- cout << "|   HOME                => restore defaults                     |\n";
- cout << "|   ESC                 => exit                                 |\n";
- cout << "|                                                               |\n";
- cout << "|   F1  => toggle shading / wire-frame                          |\n";
- cout << "|   F2  => toggle axis rendering                                |\n";
- cout << "|   F3  => toggle lighting on / off                             |\n";
- cout << "|   <b> => toggle hitbox outlines on / off                      |\n";
- cout << "*****************************************************************\n";
- cout << "|                      H A V E   F U N  !!!                    |\n";
- cout << "*****************************************************************\n";
+  cout << "*****************************************************************\n";
+  cout << "*                   TCG6223 Computer Graphics                   *\n";
+  cout << "*                  FIST, Multimedia University                  *\n";
+  cout << "*****************************************************************\n";
+  cout << "| TPS Controls:                                                 |\n";
+  cout << "|   <w>,<s>             => move Kinger forward / backward       |\n";
+  cout << "|   <a>,<d>             => strafe Kinger left / right           |\n";
+  cout << "|   <f>                 => cast heal skill                      |\n";
+  cout << "|   <c>                 => roll                                 |\n";
+  cout << "|   Mouse (move)        => rotate camera (yaw + pitch)          |\n";
+  cout << "|   Arrow UP/DOWN       => camera pitch (keyboard fallback)     |\n";
+  cout << "|   Arrow LEFT/RIGHT    => camera yaw   (keyboard fallback)     |\n";
+  cout << "|   SPACE               => jump                                 |\n";
+  cout << "|   HOME                => restore defaults                     |\n";
+  cout << "|   ESC                 => exit                                 |\n";
+  cout << "|                                                               |\n";
+  cout << "|   F1  => toggle shading / wire-frame                          |\n";
+  cout << "|   F2  => toggle axis rendering                                |\n";
+  cout << "|   F3  => toggle lighting on / off                             |\n";
+  cout << "|   <b> => toggle hitbox outlines on / off                      |\n";
+  cout << "*****************************************************************\n";
+  cout << "|                      H A V E   F U N  !!!                    |\n";
+  cout << "*****************************************************************\n";
 }
 
 //--------------------------------------------------------------------
 int main(int argc, char **argv)
 {
- glutInit(&argc, argv);
+  glutInit(&argc, argv);
 
- myWelcome();
+  myInit();
 
- myInit();
-
- glutMainLoop(); // Display everything and wait
+  glutMainLoop(); // Display everything and wait
 }
 //--------------------------------------------------------------------

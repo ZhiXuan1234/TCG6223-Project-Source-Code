@@ -7,6 +7,8 @@
 
 // Global scope reference to the main world instance
 extern ProjectWorld::MyVirtualWorld myvirtualworld;
+extern bool isTestArena;
+extern bool isDifficultyEasy;
 
 using namespace ProjectKinger;
 
@@ -100,6 +102,8 @@ Kinger::Kinger()
     currentLeanRoll  = 0.0f;
 
     velocityY = 0.0f;
+    knockbackVelX = 0.0f;
+    knockbackVelZ = 0.0f;
     isGrounded = true;
     jumpScaleY = 1.0f;
     uniformScale = 1.0f;
@@ -124,7 +128,7 @@ void Kinger::setScale(float scale)
  */
 void Kinger::jump()
 {
-    if (animation.isHealing || animation.isDead) return;
+    if (animation.isDead) return;
 
     if (isGrounded)
     {
@@ -140,6 +144,8 @@ void Kinger::jump()
  */
 void Kinger::takeDamage(int amount)
 {
+    if (isTestArena) return;
+
     if (animation.isHurt || animation.isRolling || animation.isDead) return;
 
     currentHealth -= amount;
@@ -159,6 +165,16 @@ void Kinger::takeDamage(int amount)
  */
 void Kinger::rebirth()
 {
+    if (isDifficultyEasy)
+    {
+        maxHealth = 50;
+        animation.butterflyCharges = 5;
+    }
+    else
+    {
+        maxHealth = 20;
+        animation.butterflyCharges = 3;
+    }
     currentHealth = maxHealth;
     posX = 0.0f;
     posY = -18.7f;
@@ -166,9 +182,11 @@ void Kinger::rebirth()
     posZ = 0.0f;
     facingYaw = 0.0f;
     velocityY = 0.0f;
+    knockbackVelX = 0.0f;
+    knockbackVelZ = 0.0f;
     isGrounded = true;
 
-    // Reset animation death state
+    // Reset animation death state and charges
     animation.isDead = false;
     animation.deathTimer = 0.0f;
 }
@@ -196,7 +214,10 @@ void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const b
 
         if (animation.deathTimer >= RESPAWN_DELAY)
         {
-            rebirth();
+            if (::myvirtualworld.isDebugMode)
+            {
+                rebirth();
+            }
         }
         return;
     }
@@ -227,8 +248,15 @@ void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const b
     animation.updateHealState(deltaTime);
     animation.updateHurtState(deltaTime);
 
-    if (!animation.isHealing)
     {
+        // Apply knockback velocity
+        posX += knockbackVelX * deltaTime;
+        posZ += knockbackVelZ * deltaTime;
+        knockbackVelX *= std::pow(0.1f, deltaTime);
+        knockbackVelZ *= std::pow(0.1f, deltaTime);
+        if (std::abs(knockbackVelX) < 0.01f) knockbackVelX = 0.0f;
+        if (std::abs(knockbackVelZ) < 0.01f) knockbackVelZ = 0.0f;
+
         float fwd = 0.0f;
         float rgt = 0.0f;
 

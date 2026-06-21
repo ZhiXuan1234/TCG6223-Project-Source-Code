@@ -75,7 +75,9 @@ public:
     /**
      * Constructor that initializes position, spawn-tracking flags, and loading states to default.
      */
-    Caine();
+    Caine(bool isClone = false);
+    ~Caine();
+    void copyModelDataFrom(const Caine& other);
 
     /**
      * Updates the character's animation timelines, timers, and state transitions.
@@ -211,6 +213,26 @@ public:
     float sweepTimer;
     float sweepInterval;
     bool wasLayingDown;
+    bool testArenaSweepMode;
+
+    bool sweepActive2;
+    int sweepDirection2;
+    int nextSweepDirection2;
+    float sweepCurrentPos2;
+
+    // Phase transition variables
+    int currentPhase;
+    bool isTransitioning;
+    float transitionTimer;
+    float transitionDuration;
+
+    // Doctor Strange clone move variables
+    bool isClone;
+    static const int MAX_CLONES = 4;
+    Caine* clones[MAX_CLONES];
+    int doctorStrangeState; // 0=normal, 1=disappeared, 2=emergence, 3=stunned
+    float doctorStrangeTimer;
+    float particleSpawnTimer;
 };
 
 } // namespace ProjectCaine

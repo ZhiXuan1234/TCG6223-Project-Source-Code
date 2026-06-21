@@ -19,6 +19,9 @@ GLuint TextureLoader::loadTexture(const std::string& path)
         return 0;
     }
 
+    extern void updateLoadingProgress(const std::string& action, const std::string& itemName);
+    updateLoadingProgress("Loading Texture", path);
+
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);

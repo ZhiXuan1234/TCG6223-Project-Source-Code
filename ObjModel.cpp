@@ -35,12 +35,24 @@ static FaceIndex parseFaceToken(const std::string& token)
     return idx;
 }
 
+ObjModel::ObjModel()
+    : displayListId(0)
+    , hasDisplayList(false)
+{
+}
+
 void ObjModel::clear()
 {
     vertices.clear();
     normals.clear();
     texCoords.clear();
     faces.clear();
+    if (hasDisplayList)
+    {
+        glDeleteLists(displayListId, 1);
+        displayListId = 0;
+        hasDisplayList = false;
+    }
 }
 
 bool ObjModel::loadFromObjText(const std::string& filePath)
@@ -101,51 +113,54 @@ bool ObjModel::loadFromObjText(const std::string& filePath)
     fin.close();
 
 
-    std::cout << "Loaded model: " << filePath
-              << "\nVertices: " << vertices.size()
-              << "\nNormals : " << normals.size()
-              << "\nTexCoords: " << texCoords.size()
-              << "\nFaces    : " << faces.size()
-              << std::endl;
+    extern void updateLoadingProgress(const std::string& action, const std::string& itemName);
+    updateLoadingProgress("Loading Model", filePath);
 
     return !vertices.empty() && !faces.empty();
 }
 
 void ObjModel::draw() const
 {
-    glBegin(GL_TRIANGLES);
-
-    for (size_t i = 0; i < faces.size(); ++i)
+    if (!hasDisplayList)
     {
-        const TriangleFace& f = faces[i];
-        const FaceIndex idx[3] = { f.a, f.b, f.c };
+        displayListId = glGenLists(1);
+        glNewList(displayListId, GL_COMPILE);
 
-        for (int k = 0; k < 3; ++k)
+        glBegin(GL_TRIANGLES);
+
+        for (size_t i = 0; i < faces.size(); ++i)
         {
-            if (idx[k].vn >= 0 && idx[k].vn < (int)normals.size())
-            {
-                const Vec3& n = normals[idx[k].vn];
-                glNormal3f(n.x, n.y, n.z);
-            }
+            const TriangleFace& f = faces[i];
+            const FaceIndex idx[3] = { f.a, f.b, f.c };
 
-            // Texture coordinates already parsed.
-            // Add glTexCoord2f(...) later when texture image is implemented.
-            // ADD THIS BLOCK for texture coordinates
-            if (idx[k].vt >= 0 && idx[k].vt < (int)texCoords.size())
+            for (int k = 0; k < 3; ++k)
             {
-                const Vec2& t = texCoords[idx[k].vt];
-                glTexCoord2f(t.u, t.v);
-            }
+                if (idx[k].vn >= 0 && idx[k].vn < (int)normals.size())
+                {
+                    const Vec3& n = normals[idx[k].vn];
+                    glNormal3f(n.x, n.y, n.z);
+                }
 
-            if (idx[k].v >= 0 && idx[k].v < (int)vertices.size())
-            {
-                const Vec3& v = vertices[idx[k].v];
-                glVertex3f(v.x, v.y, v.z);
+                if (idx[k].vt >= 0 && idx[k].vt < (int)texCoords.size())
+                {
+                    const Vec2& t = texCoords[idx[k].vt];
+                    glTexCoord2f(t.u, t.v);
+                }
+
+                if (idx[k].v >= 0 && idx[k].v < (int)vertices.size())
+                {
+                    const Vec3& v = vertices[idx[k].v];
+                    glVertex3f(v.x, v.y, v.z);
+                }
             }
         }
+
+        glEnd();
+        glEndList();
+        hasDisplayList = true;
     }
 
-    glEnd();
+    glCallList(displayListId);
 }
 
 Vec3 ObjModel::getCenter() const

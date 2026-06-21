@@ -37,6 +37,7 @@ public:
 
     // Projectile state variables
     bool  isBulletActive;   // Flag indicating if the bullet is currently flying
+    bool  hasSpawnedBullet; // Flag indicating if a bullet has been spawned in the current casting action
     float shootYaw;         // Saved camera/player yaw at the exact moment of bullet firing
     float shootPitch;       // Saved camera/player pitch at the exact moment of bullet firing
     float bulletPosX;       // Current X coordinate of the bullet in world space
@@ -63,7 +64,7 @@ public:
 
     // Ammo & Reload State Variables
     int currentAmmo;        // Current ammo count left in the gun
-    static const int MAX_AMMO = 30; // Max ammo capacity
+    static const int MAX_AMMO = 5; // Max ammo capacity
     
     bool isReloading;       // Flag indicating if the reload animation is active
     float reloadTimer;      // Timer tracking reload progress

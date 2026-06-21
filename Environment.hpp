@@ -7,6 +7,33 @@
 
 namespace ProjectEnvironment
 {
+    struct Meteor
+    {
+        float originalX, originalY, originalZ;
+        float currentX, currentY, currentZ;
+        float startX, startY, startZ;
+        float targetX, targetY, targetZ;
+        float scale;
+        float floatOffset;
+        float floatAmplitude;
+        int state; // 0 = floating, 1 = falling, 2 = hidden/respawning
+        float fallProgress;
+        float fallDuration;
+        float respawnTimer;
+    };
+
+    struct MeteorParticle
+    {
+        bool active;
+        float posX, posY, posZ;
+        float velX, velY, velZ;
+        float size;
+        float r, g, b;
+        float alpha;
+        float lifeTime;
+        float maxLife;
+    };
+
     class Environment
     {
     private:
@@ -66,6 +93,23 @@ namespace ProjectEnvironment
 
         // Texture Loading
         bool loadTextures();
+
+        // Meteor Attack Move Variables
+        static const int NUM_METEORS = 5;
+        Meteor meteors[NUM_METEORS];
+        static const int MAX_METEOR_PARTICLES = 300;
+        MeteorParticle meteorParticles[MAX_METEOR_PARTICLES];
+        bool isMeteorModeActive;
+        float meteorCooldownTimer;
+        float nextMeteorInterval;
+
+        void resetMeteors();
+        void updateMeteors(float deltaTime);
+        void spawnMeteorTrailParticle(float x, float y, float z, float sizeFactor);
+        void spawnMeteorBurst(float x, float y, float z);
+        void spawnMeteorPoof(float x, float y, float z);
+        void updateMeteorParticles(float deltaTime);
+        void drawMeteorParticles() const;
 
         // Object Construction
         bool loadSkyBox(const std::string& filePath);

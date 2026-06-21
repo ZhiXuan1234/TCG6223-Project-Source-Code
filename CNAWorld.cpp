@@ -18,6 +18,8 @@
 #include "CNAWorld.hpp"
 #include "TextureLoader.hpp"
 
+extern float screenShakeTimer;
+
 using namespace ProjectWorld;
 
 // =======================Whole environment lighting====================== //
@@ -473,6 +475,14 @@ void MyVirtualWorld::init()
     caine.leftEyeTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_LeftEye.png");
     caine.rightEyeTextureID = TextureLoader::loadTexture("Model/Caine/Textures/Caine_RightEye.png");
 
+    for (int i = 0; i < ProjectCaine::Caine::MAX_CLONES; i++)
+    {
+        if (caine.clones[i])
+        {
+            caine.clones[i]->copyModelDataFrom(caine);
+        }
+    }
+
     //////////////////////////////////Butterfly//////////////////////////////////
     butterfly.leftWingTextureID = TextureLoader::loadTexture(
         "Model/Butterfly/Textures/Butterfly_LeftWing.png"
@@ -572,14 +582,39 @@ void MyVirtualWorld::tickTime(float cameraYaw, float cameraPitch, const bool* ke
         {
             gloinks.updateGloinks(deltaTime);
         }
+
+        if (screenShakeTimer > 0.0f)
+        {
+            screenShakeTimer -= deltaTime;
+            if (screenShakeTimer < 0.0f) screenShakeTimer = 0.0f;
+        }
     }
     // -------------------------------------------------------------------------
 
     environment.tickTime();
 }
 
+extern bool isWinDelayed;
+extern float winDelayTimer;
+extern bool isTestArena;
+extern int caineDeathSeqState;
+extern float caineDeathSeqTimer;
+extern int caineDeathSeqTextLength;
+extern float caineDeathSeqTextTimer;
+
 void MyVirtualWorld::resetGame()
 {
+    isWinDelayed = false;
+    winDelayTimer = 0.0f;
+    isTestArena = false;
+    caineDeathSeqState = 0;
+    caineDeathSeqTimer = 0.0f;
+    caineDeathSeqTextLength = 0;
+    caineDeathSeqTextTimer = 0.0f;
+
+    // Reset meteors
+    environment.resetMeteors();
+
     // Clear Gloinks
     gloinks.animation.activeGloinks.clear();
 
