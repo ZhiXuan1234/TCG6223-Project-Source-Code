@@ -173,7 +173,28 @@ TCG6223-Project.cbp
 ```
 
 4. Make sure the compiler is MinGW.
-5. Make sure the linker options include:
+
+5. Check the linker settings:
+
+```text
+Project → Build options...
+```
+
+Then click the **project file name** on the left side, for example:
+
+```text
+TCG6223-Project
+```
+
+Do not select only `Debug` or `Release`, because the linker settings should apply to the whole project.
+
+After selecting the project name, click:
+
+```text
+Linker settings
+```
+
+Under **Other linker options**, make sure these options are included:
 
 ```text
 -lopengl32
@@ -182,19 +203,19 @@ TCG6223-Project.cbp
 -lwinmm
 ```
 
-Depending on the local GLUT setup, the GLUT option may also be:
+Depending on the local GLUT/freeglut setup, the GLUT option may also be:
 
 ```text
 -lfreeglut
 ```
 
-6. Click:
+6. Rebuild the project:
 
 ```text
 Build → Rebuild
 ```
 
-7. Click:
+7. Run the program:
 
 ```text
 Run
@@ -278,7 +299,7 @@ Security: This file came from another computer and might be blocked to help prot
 
 ### Missing DLL Files
 
-If the game runs inside Code::Blocks but does not run by double-clicking the `.exe`, copy the required DLL files beside the `.exe`.
+If the game runs inside Code::Blocks but does not run by double-clicking the `.exe`, it usually means some runtime DLL files are missing beside the executable.
 
 Common required DLL files include:
 
@@ -290,7 +311,71 @@ libstdc++-6.dll
 libwinpthread-1.dll
 ```
 
-Use DLL files from the same MinGW/freeglut setup used to compile the project.
+The DLL files should be placed in the same folder as the `.exe`.
+
+Example:
+
+```text
+TCG6223_Game/
+│
+├── TCG6223-Project.exe
+├── libfreeglut.dll
+├── glut32.dll
+├── libgcc_s_seh-1.dll
+├── libstdc++-6.dll
+├── libwinpthread-1.dll
+├── Model/
+└── Audio/
+```
+
+#### Where to Find the DLL Files
+
+For MinGW runtime DLLs, check the Code::Blocks MinGW folder:
+
+```text
+C:\Program Files (x86)\CodeBlocks\MinGW\bin
+```
+
+Look for:
+
+```text
+libgcc_s_seh-1.dll
+libstdc++-6.dll
+libwinpthread-1.dll
+```
+
+Some MinGW versions may use a different GCC runtime DLL, such as:
+
+```text
+libgcc_s_dw2-1.dll
+```
+
+Use the DLL files that match the MinGW compiler used to build the project.
+
+#### Where to Find `libfreeglut.dll`
+
+If `libfreeglut.dll` is missing, download the FreeGLUT MinGW package from:
+
+```text
+https://www.songho.ca/opengl/gl_freeglut.html
+```
+
+Basic steps:
+
+1. Download the FreeGLUT package for MinGW.
+2. Extract the downloaded file.
+3. Open the extracted `bin` folder.
+4. Copy:
+
+```text
+libfreeglut.dll
+```
+
+5. Paste it beside the game `.exe`.
+
+Do not use random DLL download websites if possible. It is safer to use the FreeGLUT package or the same DLL file from the computer that successfully built the project.
+
+---
 
 ### Model Files Cannot Load
 
@@ -310,9 +395,22 @@ Model/
 Audio/
 ```
 
+The program uses relative paths, so the `Model` and `Audio` folders must follow the `.exe`.
+
+---
+
 ### Audio Does Not Play
 
 Make sure the `Audio` folder is beside the `.exe`.
+
+Example:
+
+```text
+TCG6223-Project.exe
+Audio/
+├── BGM/
+└── SFX/
+```
 
 Also make sure the linker contains:
 
