@@ -91,7 +91,7 @@ Kinger::Kinger()
     maxHealth = 100;
 
     posX      = 0.0f;
-    posY      = -18.7f; 
+    posY      = -18.7f;
     currentGroundY = -18.7f;
     posZ      = 0.0f;
     facingYaw = 0.0f;
@@ -132,9 +132,9 @@ void Kinger::jump()
 
     if (isGrounded)
     {
-        velocityY = 50.0f; 
+        velocityY = 50.0f;
         isGrounded = false;
-        jumpScaleY = 1.2f; 
+        jumpScaleY = 1.2f;
     }
 }
 
@@ -238,6 +238,9 @@ void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const b
     animation.updateSkillState(deltaTime, cameraYaw, cameraPitch, posX, posY, posZ, uniformScale);
     if (animation.shouldSpawnMuzzleFlash)
     {
+        //Shotgun Sound Effect
+        ::myvirtualworld.audioManager.playSoundEffect("Audio\\SFX\\Shotgun.wav");
+
         spawnMuzzleFlash(animation.bulletStartX, animation.bulletStartY, animation.bulletStartZ);
         animation.shouldSpawnMuzzleFlash = false;
     }
@@ -268,7 +271,7 @@ void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const b
         float magnitude = std::sqrt(fwd * fwd + rgt * rgt);
         if (magnitude > 0.0f)
         {
-            float KINGER_INTERNAL_SPEED = 45.0f; 
+            float KINGER_INTERNAL_SPEED = 45.0f;
 
             if (animation.isRolling)
             {
@@ -310,7 +313,7 @@ void Kinger::update(float deltaTime, float cameraYaw, float cameraPitch, const b
         // Clamp to map borders (circus walls) dynamically based on the skybox model's dimensions
         Vec3 skyMin, skyMax;
         ::myvirtualworld.environment.getSkyBoxBounds(skyMin, skyMax);
-        
+
         float playerOffset = 3.0f * uniformScale;
         float limitMinX = skyMin.x * boundaryScale + playerOffset;
         float limitMaxX = skyMax.x * boundaryScale - playerOffset;
@@ -649,7 +652,7 @@ void Kinger::drawLeftHand() const
     glRotatef(gunAimPitch * aimBlend, 1.0f, 0.0f, 0.0f);
 
     // Apply basic idle sway
-    glRotatef(-animation.armRotation, 1.0f, 0.0f, 0.0f); 
+    glRotatef(-animation.armRotation, 1.0f, 0.0f, 0.0f);
     //glRotatef(180,0,0,1); //initial position rotation
     glRotatef(150,0,0,1); //adjust position rotation
     glRotatef(180,1,0,0);
@@ -791,7 +794,7 @@ void Kinger::drawBullet() const
 
     glDisable(GL_CULL_FACE);
     glEnable(GL_NORMALIZE);
-    
+
     static GLUquadricObj* bulletQuadric = NULL;
     if (bulletQuadric == NULL)
     {
@@ -818,28 +821,28 @@ void Kinger::spawnMuzzleFlash(float x, float y, float z)
             muzzleParticles[i].posX = x;
             muzzleParticles[i].posY = y;
             muzzleParticles[i].posZ = z;
-            
+
             // Random direction in a sphere
             float theta = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * 3.14159265f;
             float phi = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 3.14159265f;
             float speed = 10.0f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 20.0f; // 10 to 30 units/sec
-            
+
             muzzleParticles[i].velX = speed * std::sin(phi) * std::cos(theta);
             muzzleParticles[i].velY = speed * std::cos(phi);
             muzzleParticles[i].velZ = speed * std::sin(phi) * std::sin(theta);
-            
+
             // Muzzle flash color (Yellow / Orange spectrum)
             // Red is always 1.0f. Green varies to create orange/yellow. Blue is 0.0f.
             float gVal = 0.3f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 0.6f; // 0.3 to 0.9
             muzzleParticles[i].r = 1.0f;
             muzzleParticles[i].g = gVal;
             muzzleParticles[i].b = 0.0f;
-            
+
             muzzleParticles[i].size = 1.5f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f; // 1.5 to 3.5
             muzzleParticles[i].alpha = 1.0f;
             muzzleParticles[i].lifeTime = 0.0f;
             muzzleParticles[i].maxLife = 0.15f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 0.15f; // 0.15 to 0.30 seconds
-            
+
             spawned++;
         }
     }
@@ -854,12 +857,12 @@ void Kinger::updateMuzzleParticles(float deltaTime)
             muzzleParticles[i].posX += muzzleParticles[i].velX * deltaTime;
             muzzleParticles[i].posY += muzzleParticles[i].velY * deltaTime;
             muzzleParticles[i].posZ += muzzleParticles[i].velZ * deltaTime;
-            
+
             // Air resistance
             muzzleParticles[i].velX *= 0.92f;
             muzzleParticles[i].velY *= 0.92f;
             muzzleParticles[i].velZ *= 0.92f;
-            
+
             muzzleParticles[i].lifeTime += deltaTime;
             if (muzzleParticles[i].lifeTime >= muzzleParticles[i].maxLife)
             {
@@ -870,7 +873,7 @@ void Kinger::updateMuzzleParticles(float deltaTime)
                 // Fade out alpha
                 float progress = muzzleParticles[i].lifeTime / muzzleParticles[i].maxLife;
                 muzzleParticles[i].alpha = 1.0f - progress;
-                
+
                 // Grow size slightly as they expand, then shrink
                 if (progress < 0.2f)
                 {
@@ -893,20 +896,20 @@ void Kinger::drawMuzzleParticles() const
     glDisable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-    
+
     for (int i = 0; i < MAX_MUZZLE_PARTICLES; i++)
     {
         if (muzzleParticles[i].active)
         {
             glPushMatrix();
             glTranslatef(muzzleParticles[i].posX, muzzleParticles[i].posY, muzzleParticles[i].posZ);
-            
+
             // Spin particles for a dynamic look
             float spin = muzzleParticles[i].lifeTime * 250.0f;
             glRotatef(spin, 1.0f, 1.0f, 0.0f);
-            
+
             glColor4f(muzzleParticles[i].r, muzzleParticles[i].g, muzzleParticles[i].b, muzzleParticles[i].alpha);
-            
+
             // Draw a solid cube
             float s = muzzleParticles[i].size * 0.5f;
             glBegin(GL_QUADS);
@@ -923,7 +926,7 @@ void Kinger::drawMuzzleParticles() const
                 // Left
                 glVertex3f(-s, -s, -s); glVertex3f(-s, -s,  s); glVertex3f(-s,  s,  s); glVertex3f(-s,  s, -s);
             glEnd();
-            
+
             glPopMatrix();
         }
     }
@@ -957,7 +960,7 @@ void Kinger::draw() const
         float progress = animation.deathTimer / DEATH_DURATION;
         if (progress > 1.0f) progress = 1.0f;
         float fallAngle = progress * 90.0f; // 0 to 90 degrees
-        
+
         glTranslatef(0.0f, -18.7f, 0.0f);
         glRotatef(fallAngle, 0.0f, 0.0f, 1.0f);
         glTranslatef(0.0f, 18.7f, 0.0f);
@@ -1049,7 +1052,7 @@ void Kinger::draw() const
         // Apply uniformScale to perfectly shrink the path offsets along with the character model
         const float HAND_OFFSET_X = -20.0f * uniformScale;
         const float HAND_OFFSET_Y = 15.0f * uniformScale;
-        const float HAND_OFFSET_Z = -15.0f * uniformScale; 
+        const float HAND_OFFSET_Z = -15.0f * uniformScale;
 
         // Apply 2D rotation matrix based on horizontal facing direction
         float hx = (HAND_OFFSET_X * std::cos(facingYaw)) + (HAND_OFFSET_Z * std::sin(facingYaw));

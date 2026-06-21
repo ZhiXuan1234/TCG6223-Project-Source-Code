@@ -11,19 +11,33 @@ AudioManager::AudioManager()
 
 void AudioManager::playBackgroundMusic(const std::string& filePath)
 {
-    if (bgmPlaying)
-        return;
+    if (bgmPlaying) return;
 
-    BOOL success = PlaySound(
-        filePath.c_str(),
-        NULL,
-        SND_FILENAME | SND_ASYNC | SND_LOOP
-    );
+    // Close old BGM alias first, just in case
+    mciSendString("close bgm", NULL, 0, NULL);
 
-    if (!success)
+    std::string openCommand = "open \"" + filePath + "\" type waveaudio alias bgm";
+    MCIERROR openResult = mciSendString(openCommand.c_str(), NULL, 0, NULL);
+
+    if (openResult != 0)
     {
-        std::cout << "Failed to play background music: "
-                  << filePath << std::endl;
+        char errorText[256];
+        mciGetErrorString(openResult, errorText, sizeof(errorText));
+
+        std::cout << "Failed to open background music: " << filePath << std::endl;
+        std::cout << "MCI Error: " << errorText << std::endl;
+        return;
+    }
+
+    MCIERROR playResult = mciSendString("play bgm repeat", NULL, 0, NULL);
+
+    if (playResult != 0)
+    {
+        char errorText[256];
+        mciGetErrorString(playResult, errorText, sizeof(errorText));
+
+        std::cout << "Failed to play background music: " << filePath << std::endl;
+        std::cout << "MCI Error: " << errorText << std::endl;
         return;
     }
 
@@ -32,6 +46,21 @@ void AudioManager::playBackgroundMusic(const std::string& filePath)
 
 void AudioManager::stopBackgroundMusic()
 {
-    PlaySound(NULL, NULL, 0);
+    mciSendString("stop bgm", NULL, 0, NULL);
+    mciSendString("close bgm", NULL, 0, NULL);
     bgmPlaying = false;
+}
+
+void AudioManager::playSoundEffect(const std::string& filePath)
+{
+    BOOL success = PlaySound(
+        filePath.c_str(),
+        NULL,
+        SND_FILENAME | SND_ASYNC
+    );
+
+    if (!success)
+    {
+        std::cout << "Failed to play sound effect: " << filePath << std::endl;
+    }
 }

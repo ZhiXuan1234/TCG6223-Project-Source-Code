@@ -13,6 +13,8 @@ public:
 
     void playBackgroundMusic(const std::string& filePath);
     void stopBackgroundMusic();
+
+    void playSoundEffect(const std::string& filePath);
 };
 
 #endif

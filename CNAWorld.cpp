@@ -511,7 +511,7 @@ void MyVirtualWorld::init()
     caine.posX = 0.0f;
     caine.posY = 0.0f;
     caine.posZ = -120.0f;
-    
+
 
     isDebugMode = true;
     isCaineActive = true;
@@ -525,7 +525,7 @@ void MyVirtualWorld::init()
     setupEnvironmentLighting();
 
     /*Background Music*/
-    //audioManager.playBackgroundMusic("Audio\\BGM\\[Jigoku Shoujo OST] Ake ni Somaru - The Faustian (128k).wav");
+    audioManager.playBackgroundMusic("Audio\\BGM\\TheAmazingDigitalCircusMainTheme.wav");
 }
 
 void MyVirtualWorld::draw()
@@ -535,17 +535,17 @@ void MyVirtualWorld::draw()
 
     /*Characters*/
     kinger.draw();
-    
+
     if (isGloinksActive)
     {
         gloinks.draw();
     }
-    
+
     if (isCaineActive)
     {
         caine.draw();
     }
-    
+
     //butterfly.draw();
     //kingerRoll.draw();
 }
@@ -572,12 +572,12 @@ void MyVirtualWorld::tickTime(float cameraYaw, float cameraPitch, const bool* ke
         }
 
         kinger.update(deltaTime, cameraYaw, cameraPitch, keyStates);
-        
+
         if (isCaineActive)
         {
             caine.update(deltaTime);
         }
-        
+
         if (isGloinksActive)
         {
             gloinks.updateGloinks(deltaTime);
