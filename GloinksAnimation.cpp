@@ -105,11 +105,32 @@ void GloinksAnimation::updateGloinks(float deltaTime)
     // Spawning: only in gameplay mode (not debug mode)
     if (!::myvirtualworld.isDebugMode)
     {
-        if (::myvirtualworld.isCaineActive && ::myvirtualworld.caine.animation.isDead && ::myvirtualworld.caine.currentPhase == 3)
+        if (::myvirtualworld.isCaineActive)
         {
-            activeGloinks.clear();
+            if (::myvirtualworld.caine.currentPhase == 1)
+            {
+                maxGloinks = 0;
+                activeGloinks.clear();
+            }
+            else if (::myvirtualworld.caine.currentPhase == 2)
+            {
+                maxGloinks = 5;
+            }
+            else if (::myvirtualworld.caine.currentPhase == 3)
+            {
+                if (::myvirtualworld.caine.animation.isDead)
+                {
+                    activeGloinks.clear();
+                    maxGloinks = 0;
+                }
+                else
+                {
+                    maxGloinks = 10;
+                }
+            }
         }
-        else
+
+        if (maxGloinks > 0)
         {
             int aliveCount = 0;
             for (const auto& g : activeGloinks)
@@ -268,7 +289,7 @@ void GloinksAnimation::updateGloinks(float deltaTime)
                         // Kinger takes damage
                         if (!::myvirtualworld.kinger.animation.isDead)
                         {
-                            ::myvirtualworld.kinger.takeDamage(10);
+                            ::myvirtualworld.kinger.takeDamage(1);
                         }
 
                         // Trigger knockback state (0.5 seconds duration, speed is 100.0f/s)

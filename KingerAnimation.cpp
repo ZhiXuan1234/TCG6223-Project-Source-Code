@@ -99,7 +99,7 @@ KingerAnimation::KingerAnimation()
     , leftArmReloadYOffset(0.0f)
     , rightArmReloadPitch(0.0f)
     , rightArmReloadYaw(0.0f)
-    , butterflyCharges(100)
+    , butterflyCharges(3)
     , isHealing(false)
     , healTimer(0.0f)
     , leftArmHealPitch(0.0f)
@@ -278,7 +278,7 @@ void KingerAnimation::updateSkillState(float deltaTime, float currentYaw, float 
                                                  bulletPosX, bulletPosY, bulletPosZ,
                                                  minX, maxX, minY, maxY, minZ, maxZ))
                             {
-                                clone->takeDamage(1);
+                                clone->takeDamage(2);
                                 isBulletActive = false;
                                 hitSomething = true;
                                 break;
@@ -303,7 +303,7 @@ void KingerAnimation::updateSkillState(float deltaTime, float currentYaw, float 
                                          bulletPosX, bulletPosY, bulletPosZ,
                                          minX, maxX, minY, maxY, minZ, maxZ))
                     {
-                        ::myvirtualworld.caine.takeDamage(1);
+                        ::myvirtualworld.caine.takeDamage(5);
                         isBulletActive = false;
                     }
                 }
@@ -505,15 +505,19 @@ void KingerAnimation::updateReloadState(float deltaTime)
  */
 void KingerAnimation::castHealSkill(int& currentHealth, int maxHealth)
 {
-    if (isHealing || isRolling || butterflyCharges <= 0 || isHurt) return;
+    if (isHealing || isRolling || butterflyCharges <= 0 || isHurt || currentHealth >= maxHealth) return;
 
     isHealing = true;
     healTimer = 0.0f;
     leftArmHealPitch = 0.0f;
-    butterflyCharges--;
 
-    currentHealth += 30;
-    if (currentHealth > maxHealth) currentHealth = maxHealth;
+    extern bool isTestArena;
+    if (!isTestArena)
+    {
+        butterflyCharges--;
+    }
+
+    currentHealth = maxHealth;
 }
 
 /**

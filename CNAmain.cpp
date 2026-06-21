@@ -135,8 +135,25 @@ GameUIState currentUIState = START_MENU;
 bool isWinDelayed = false;
 float winDelayTimer = 0.0f;
 bool isTestArena = false;
+bool isDifficultyEasy = true;
 float screenShakeTimer = 0.0f;
 float screenShakeIntensity = 0.0f;
+
+int caineDeathSeqState = 0;
+float caineDeathSeqTimer = 0.0f;
+int caineDeathSeqTextLength = 0;
+float caineDeathSeqTextTimer = 0.0f;
+std::string caineDeathSeqDialogue = "Uh.. wait-";  // Edit this string to change Caine's death dialogue
+float deathSeqCamStartEyeX = 0.0f;
+float deathSeqCamStartEyeY = 0.0f;
+float deathSeqCamStartEyeZ = 0.0f;
+float deathSeqCamStartTargetX = 0.0f;
+float deathSeqCamStartTargetY = 0.0f;
+float deathSeqCamStartTargetZ = 0.0f;
+float currentCameraTargetX = 0.0f;
+float currentCameraTargetY = 0.0f;
+float currentCameraTargetZ = 0.0f;
+bool hasStartedDeathSeq = false;
 
 static void drawCenteredString(void* font, const char* str, float y, float left, float right);
 
@@ -267,6 +284,10 @@ void drawHUD()
     char kingerAmmoText[64];
     sprintf(kingerAmmoText, "Ammo: %d / %d", myvirtualworld.kinger.animation.currentAmmo, myvirtualworld.kinger.animation.MAX_AMMO);
     drawString(GLUT_BITMAP_HELVETICA_12, kingerAmmoText, left, top + 20.0f);
+
+    char kingerHealText[64];
+    sprintf(kingerHealText, "Heal: %d/%d", myvirtualworld.kinger.animation.butterflyCharges, isDifficultyEasy ? 5 : 3);
+    drawString(GLUT_BITMAP_HELVETICA_12, kingerHealText, left, top + 34.0f);
 
     // Background Container
     glColor4f(0.08f, 0.08f, 0.12f, 0.7f);
@@ -503,100 +524,148 @@ void drawHUD()
         myvirtualworld.caine.animation.isLayingDown &&
         !myvirtualworld.caine.sweepActive)
     {
-        float sweepT = myvirtualworld.caine.sweepTimer;
-        float sweepI = myvirtualworld.caine.sweepInterval;
-        int   sweepDir = myvirtualworld.caine.nextSweepDirection; // pre-rolled upcoming direction
-
-        // Flash frequency increases as the attack approaches (1 Hz to 8 Hz)
-        float progress = (sweepI > 0.0f) ? (sweepT / sweepI) : 0.0f;
-        float flashFreq = 1.0f + progress * 7.0f;
-        // Smooth sine-wave pulse alpha (fades in/out, intensifies near strike)
-        float pulseAlpha = 0.25f + 0.5f * (0.5f + 0.5f * std::sin(sweepT * flashFreq * 2.0f * 3.14159265f));
-
-        float W = (float)window.width;
-        float H = (float)window.height;
-        float cx2 = W * 0.5f;
-        float cy2 = H * 0.5f;
-
-        // Triangle size
-        float triBase  = 60.0f; // half-width of the triangle base
-        float triDepth = 40.0f; // how far the tip juts inward from the base
-        float radius   = std::min(W, H) * 0.25f; // base distance from screen center
-
-        // Compute threat direction unit vector (dx, dy) in screen coordinates
-        float dx = 0.0f;
-        float dy = 0.0f;
-        if (sweepDir == 0) // North: threat comes from negative Z.
+        int numWarnings = (myvirtualworld.caine.currentPhase == 3) ? 2 : 1;
+        for (int wIdx = 0; wIdx < numWarnings; wIdx++)
         {
-            dx = std::sin(cameraYaw);
-            dy = std::cos(cameraYaw);
+            int sweepDir = (wIdx == 0) ? myvirtualworld.caine.nextSweepDirection : myvirtualworld.caine.nextSweepDirection2;
+            
+            float sweepT = myvirtualworld.caine.sweepTimer;
+            float sweepI = myvirtualworld.caine.sweepInterval;
+
+            // Flash frequency increases as the attack approaches (1 Hz to 8 Hz)
+            float progress = (sweepI > 0.0f) ? (sweepT / sweepI) : 0.0f;
+            float flashFreq = 1.0f + progress * 7.0f;
+            // Smooth sine-wave pulse alpha (fades in/out, intensifies near strike)
+            float pulseAlpha = 0.25f + 0.5f * (0.5f + 0.5f * std::sin(sweepT * flashFreq * 2.0f * 3.14159265f));
+
+            float W = (float)window.width;
+            float H = (float)window.height;
+            float cx2 = W * 0.5f;
+            float cy2 = H * 0.5f;
+
+            // Triangle size
+            float triBase  = 60.0f; // half-width of the triangle base
+            float triDepth = 40.0f; // how far the tip juts inward from the base
+            float radius   = std::min(W, H) * 0.25f; // base distance from screen center
+
+            // Compute threat direction unit vector (dx, dy) in screen coordinates
+            float dx = 0.0f;
+            float dy = 0.0f;
+            if (sweepDir == 0) // North
+            {
+                dx = std::sin(cameraYaw);
+                dy = std::cos(cameraYaw);
+            }
+            else if (sweepDir == 1) // South
+            {
+                dx = -std::sin(cameraYaw);
+                dy = -std::cos(cameraYaw);
+            }
+            else if (sweepDir == 2) // West
+            {
+                dx = -std::cos(cameraYaw);
+                dy = std::sin(cameraYaw);
+            }
+            else // East (sweepDir == 3)
+            {
+                dx = std::cos(cameraYaw);
+                dy = -std::sin(cameraYaw);
+            }
+
+            // Normalize threat direction vector to avoid floating point issues
+            float len = std::sqrt(dx * dx + dy * dy);
+            if (len > 0.0f)
+            {
+                dx /= len;
+                dy /= len;
+            }
+
+            // Base center of threat triangle
+            float bx = cx2 + radius * dx;
+            float by = cy2 + radius * dy;
+
+            // Tip pointing inwards (towards center)
+            float tx = cx2 + (radius - triDepth) * dx;
+            float ty = cy2 + (radius - triDepth) * dy;
+
+            // Base corners offset perpendicularly from base center (bx, by)
+            float b1x = bx - triBase * dy;
+            float b1y = by + triBase * dx;
+            float b2x = bx + triBase * dy;
+            float b2y = by - triBase * dx;
+
+            // Warning label text position (aligned outside the base, further away from center)
+            float labelDist = radius + 15.0f;
+            float lx = cx2 + labelDist * dx;
+            float ly = cy2 + labelDist * dy;
+            float labelX = lx - 26.0f;
+            float labelY = ly - 5.0f;
+            const char* warningLabel = "! SWEEP !";
+
+            // Draw filled triangle with additive-style blending for glow effect
+            glColor4f(1.0f, 0.08f, 0.08f, pulseAlpha);
+            glBegin(GL_TRIANGLES);
+                glVertex2f(tx,  ty);
+                glVertex2f(b1x, b1y);
+                glVertex2f(b2x, b2y);
+            glEnd();
+
+            // Draw bright red outline for crispness
+            glLineWidth(2.5f);
+            glColor4f(1.0f, 0.3f, 0.3f, pulseAlpha + 0.2f > 1.0f ? 1.0f : pulseAlpha + 0.2f);
+            glBegin(GL_LINE_LOOP);
+                glVertex2f(tx,  ty);
+                glVertex2f(b1x, b1y);
+                glVertex2f(b2x, b2y);
+            glEnd();
+
+            // Draw warning text label
+            glColor4f(1.0f, 1.0f, 0.2f, pulseAlpha + 0.2f > 1.0f ? 1.0f : pulseAlpha + 0.2f);
+            drawString(GLUT_BITMAP_HELVETICA_12, warningLabel, labelX, labelY);
         }
-        else if (sweepDir == 1) // South: threat comes from positive Z.
-        {
-            dx = -std::sin(cameraYaw);
-            dy = -std::cos(cameraYaw);
+    }
+
+    // RPG Dialogue Box (Caine Death sequence States 2 & 3)
+    if (caineDeathSeqState == 2 || caineDeathSeqState == 3)
+    {
+        float boxW = 600.0f;
+        float boxH = 120.0f;
+        if (boxW > window.width * 0.9f) {
+            boxW = window.width * 0.9f;
         }
-        else if (sweepDir == 2) // West: threat comes from negative X.
-        {
-            dx = -std::cos(cameraYaw);
-            dy = std::sin(cameraYaw);
-        }
-        else // East (sweepDir == 3): threat comes from positive X.
-        {
-            dx = std::cos(cameraYaw);
-            dy = -std::sin(cameraYaw);
-        }
+        float bLeft = (window.width - boxW) / 2.0f;
+        float bRight = bLeft + boxW;
+        float bBottom = 40.0f;
+        float bTop = bBottom + boxH;
 
-        // Normalize threat direction vector to avoid floating point issues
-        float len = std::sqrt(dx * dx + dy * dy);
-        if (len > 0.0f)
-        {
-            dx /= len;
-            dy /= len;
-        }
-
-        // Base center of threat triangle
-        float bx = cx2 + radius * dx;
-        float by = cy2 + radius * dy;
-
-        // Tip pointing inwards (towards center)
-        float tx = cx2 + (radius - triDepth) * dx;
-        float ty = cy2 + (radius - triDepth) * dy;
-
-        // Base corners offset perpendicularly from base center (bx, by)
-        float b1x = bx - triBase * dy;
-        float b1y = by + triBase * dx;
-        float b2x = bx + triBase * dy;
-        float b2y = by - triBase * dx;
-
-        // Warning label text position (aligned outside the base, further away from center)
-        float labelDist = radius + 15.0f;
-        float lx = cx2 + labelDist * dx;
-        float ly = cy2 + labelDist * dy;
-        float labelX = lx - 26.0f;
-        float labelY = ly - 5.0f;
-        const char* warningLabel = "! SWEEP !";
-
-        // Draw filled triangle with additive-style blending for glow effect
-        glColor4f(1.0f, 0.08f, 0.08f, pulseAlpha);
-        glBegin(GL_TRIANGLES);
-            glVertex2f(tx,  ty);
-            glVertex2f(b1x, b1y);
-            glVertex2f(b2x, b2y);
+        // Draw solid black background
+        glColor4f(0.0f, 0.0f, 0.0f, 0.95f);
+        glBegin(GL_QUADS);
+            glVertex2f(bLeft, bBottom);
+            glVertex2f(bRight, bBottom);
+            glVertex2f(bRight, bTop);
+            glVertex2f(bLeft, bTop);
         glEnd();
 
-        // Draw bright red outline for crispness
-        glLineWidth(2.5f);
-        glColor4f(1.0f, 0.3f, 0.3f, pulseAlpha + 0.2f > 1.0f ? 1.0f : pulseAlpha + 0.2f);
+        // Draw thick white border
+        glLineWidth(4.0f);
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
         glBegin(GL_LINE_LOOP);
-            glVertex2f(tx,  ty);
-            glVertex2f(b1x, b1y);
-            glVertex2f(b2x, b2y);
+            glVertex2f(bLeft, bBottom);
+            glVertex2f(bRight, bBottom);
+            glVertex2f(bRight, bTop);
+            glVertex2f(bLeft, bTop);
         glEnd();
 
-        // Draw warning text label
-        glColor4f(1.0f, 1.0f, 0.2f, pulseAlpha + 0.2f > 1.0f ? 1.0f : pulseAlpha + 0.2f);
-        drawString(GLUT_BITMAP_HELVETICA_12, warningLabel, labelX, labelY);
+        // Draw title "Caine" in gold
+        glColor4f(1.0f, 0.84f, 0.0f, 1.0f); // Gold
+        drawString(GLUT_BITMAP_HELVETICA_18, "Caine", bLeft + 30.0f, bTop - 30.0f);
+
+        // Draw scrolled dialogue text in white
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        std::string fullText = caineDeathSeqDialogue;
+        std::string subText = (caineDeathSeqState == 3) ? fullText : fullText.substr(0, caineDeathSeqTextLength);
+        drawString(GLUT_BITMAP_HELVETICA_18, subText.c_str(), bLeft + 30.0f, bTop - 75.0f);
     }
 
     glPopMatrix();
@@ -659,7 +728,7 @@ void drawMenuUI()
         glEnd();
 
         float width = 450.0f;
-        float height = 320.0f;
+        float height = 360.0f;
         float left = cx - width / 2.0f;
         float right = cx + width / 2.0f;
         float top = cy + height / 2.0f;
@@ -740,11 +809,18 @@ void drawMenuUI()
         glColor4f(0.95f, 0.95f, 0.95f, 1.0f);
         drawString(GLUT_BITMAP_HELVETICA_18, "Test Arena", left + 100.0f, startY - 2.0f * spacing);
 
+        // Difficulty Setting
+        glColor4f(0.0f, 0.9f, 0.5f, 1.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "[4]", left + 60.0f, startY - 3.0f * spacing);
+        glColor4f(0.95f, 0.95f, 0.95f, 1.0f);
+        std::string diffText = "Difficulty: " + std::string(isDifficultyEasy ? "EASY" : "NORMAL");
+        drawString(GLUT_BITMAP_HELVETICA_18, diffText.c_str(), left + 100.0f, startY - 3.0f * spacing);
+
         // Exit Game
         glColor4f(1.0f, 0.3f, 0.3f, 1.0f);
-        drawString(GLUT_BITMAP_HELVETICA_18, "[0]", left + 60.0f, startY - 3.0f * spacing - 15.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "[0]", left + 60.0f, startY - 4.0f * spacing - 15.0f);
         glColor4f(0.90f, 0.90f, 0.90f, 1.0f);
-        drawString(GLUT_BITMAP_HELVETICA_18, "Exit Game", left + 100.0f, startY - 3.0f * spacing - 15.0f);
+        drawString(GLUT_BITMAP_HELVETICA_18, "Exit Game", left + 100.0f, startY - 4.0f * spacing - 15.0f);
 
         // Footer
         glColor4f(0.6f, 0.6f, 0.6f, 0.7f);
@@ -1026,7 +1102,7 @@ void drawMenuUI()
 
 void updateKeyStatesFromWindows()
 {
-    if (currentUIState != GAMEPLAY)
+    if (currentUIState != GAMEPLAY || (caineDeathSeqState >= 1 && caineDeathSeqState <= 3))
     {
         keyStates['w'] = keyStates['W'] = false;
         keyStates['a'] = keyStates['A'] = false;
@@ -1067,8 +1143,8 @@ void myDisplayFunc(void)
           currentUIState = DEATH_SCREEN;
       }
 
-      // Win Check: Caine is dead in Phase 3
-      if (myvirtualworld.isCaineActive && myvirtualworld.caine.animation.isDead && myvirtualworld.caine.currentPhase == 3)
+      // Win Check: Caine is dead in Phase 3 (Only when in Test Arena)
+      if (isTestArena && myvirtualworld.isCaineActive && myvirtualworld.caine.animation.isDead && myvirtualworld.caine.currentPhase == 3)
       {
           if (!isWinDelayed)
           {
@@ -1092,6 +1168,86 @@ void myDisplayFunc(void)
               isWinDelayed = false;
           }
       }
+  }
+
+  // Cutscene State Machine Update
+  if (currentUIState == GAMEPLAY && caineDeathSeqState > 0)
+  {
+      caineDeathSeqTimer += deltaTime;
+      if (caineDeathSeqState == 1)
+      {
+          if (!hasStartedDeathSeq)
+          {
+              hasStartedDeathSeq = true;
+              deathSeqCamStartEyeX = currentCameraEyeX;
+              deathSeqCamStartEyeY = currentCameraEyeY;
+              deathSeqCamStartEyeZ = currentCameraEyeZ;
+              deathSeqCamStartTargetX = currentCameraTargetX;
+              deathSeqCamStartTargetY = currentCameraTargetY;
+              deathSeqCamStartTargetZ = currentCameraTargetZ;
+
+              // Clear Gloinks and projectiles
+              myvirtualworld.isGloinksActive = false;
+              myvirtualworld.gloinks.animation.activeGloinks.clear();
+              for (int i = 0; i < myvirtualworld.caine.MAX_CAINE_PROJECTILES; i++)
+              {
+                  myvirtualworld.caine.projectiles[i].active = false;
+              }
+              myvirtualworld.kinger.animation.isBulletActive = false;
+          }
+
+          if (caineDeathSeqTimer >= 1.0f)
+          {
+              caineDeathSeqState = 2;
+              caineDeathSeqTimer = 0.0f;
+              caineDeathSeqTextLength = 0;
+              caineDeathSeqTextTimer = 0.0f;
+          }
+      }
+      else if (caineDeathSeqState == 2)
+      {
+          caineDeathSeqTextTimer += deltaTime;
+          int targetLen = static_cast<int>(caineDeathSeqTextTimer / 0.08f);
+          const std::string dialogueText = caineDeathSeqDialogue;
+          if (targetLen > (int)dialogueText.length())
+          {
+              targetLen = (int)dialogueText.length();
+          }
+          caineDeathSeqTextLength = targetLen;
+
+          if (caineDeathSeqTextLength >= (int)dialogueText.length())
+          {
+              caineDeathSeqState = 3;
+              caineDeathSeqTimer = 0.0f;
+          }
+      }
+      else if (caineDeathSeqState == 3)
+      {
+          if (caineDeathSeqTimer >= 5.0f)
+          {
+              caineDeathSeqState = 4;
+              caineDeathSeqTimer = 0.0f;
+              deathSeqCamStartEyeX = currentCameraEyeX;
+              deathSeqCamStartEyeY = currentCameraEyeY;
+              deathSeqCamStartEyeZ = currentCameraEyeZ;
+              deathSeqCamStartTargetX = currentCameraTargetX;
+              deathSeqCamStartTargetY = currentCameraTargetY;
+              deathSeqCamStartTargetZ = currentCameraTargetZ;
+          }
+      }
+      else if (caineDeathSeqState == 4)
+      {
+          if (caineDeathSeqTimer >= 5.0f)
+          {
+              caineDeathSeqState = 5;
+              caineDeathSeqTimer = 0.0f;
+              currentUIState = WIN_SCREEN;
+          }
+      }
+  }
+  else
+  {
+      hasStartedDeathSeq = false;
   }
  
  // Smoothly follow the player's Y position
@@ -1152,6 +1308,17 @@ void myDisplayFunc(void)
       if (tMinZ < t) t = tMinZ;
   }
 
+  // Clamp camera above the floor plane (Y = -18.7f) with a small margin
+  {
+      const float floorY = -18.7f + margin;
+      // Ray: eyeY = baseTargetY + t * vy. Solve for t when eyeY == floorY.
+      if (vy < -0.001f)
+      {
+          float tFloor = (floorY - baseTargetY) / vy;
+          if (tFloor > 0.0f && tFloor < t) t = tFloor;
+      }
+  }
+
   if (t < 0.1f) t = 0.1f;
 
   // The camera's final world position, zoomed in if close to the circus walls
@@ -1159,34 +1326,155 @@ void myDisplayFunc(void)
   float eyeY = baseTargetY + t * vy;
   float eyeZ = targetZ + t * vz;
 
- const float GROUND_LEVEL = myvirtualworld.kinger.posY;
- if (eyeY < GROUND_LEVEL + 1.0f)
- {
-     eyeY = GROUND_LEVEL + 1.0f;
- }
+  // Record normal target variables
+  currentCameraTargetX = targetX;
+  currentCameraTargetY = baseTargetY;
+  currentCameraTargetZ = targetZ;
 
- // Record camera position to global variables
- currentCameraEyeX = eyeX;
- currentCameraEyeY = eyeY;
- currentCameraEyeZ = eyeZ;
+  float drawEyeX = eyeX;
+  float drawEyeY = eyeY;
+  float drawEyeZ = eyeZ;
+  float drawTargetX = targetX;
+  float drawTargetY = baseTargetY;
+  float drawTargetZ = targetZ;
 
- // Calculate and record camera look direction to global variables
- float dx = targetX - eyeX;
- float dy = baseTargetY - eyeY;
- float dz = targetZ - eyeZ;
- float len = std::sqrt(dx * dx + dy * dy + dz * dz);
- if (len > 0.0f)
- {
-     currentCameraDirX = dx / len;
-     currentCameraDirY = dy / len;
-     currentCameraDirZ = dz / len;
- }
- else
- {
-     currentCameraDirX = -std::sin(cameraYaw) * std::cos(cameraPitch);
-     currentCameraDirY = -std::sin(cameraPitch);
-     currentCameraDirZ = -std::cos(cameraYaw) * std::cos(cameraPitch);
- }
+  if (caineDeathSeqState >= 1 && caineDeathSeqState <= 4)
+  {
+      ProjectCaine::Caine& boss = myvirtualworld.caine;
+      Vec3 caineCenter = boss.getCaineWorldCenter();
+      
+      // Calculate normalized direction from State 1 start to Caine's center
+      float sdx = caineCenter.x - deathSeqCamStartEyeX;
+      float sdy = caineCenter.y - deathSeqCamStartEyeY;
+      float sdz = caineCenter.z - deathSeqCamStartEyeZ;
+      float slen = std::sqrt(sdx*sdx + sdy*sdy + sdz*sdz);
+      float zoomDirX = 0.0f, zoomDirY = 0.0f, zoomDirZ = 1.0f;
+      if (slen > 0.0f)
+      {
+          zoomDirX = sdx / slen;
+          zoomDirY = sdy / slen;
+          zoomDirZ = sdz / slen;
+      }
+
+      float destEyeX = caineCenter.x - zoomDirX * 45.0f;
+      float destEyeY = caineCenter.y - zoomDirY * 45.0f;
+      float destEyeZ = caineCenter.z - zoomDirZ * 45.0f;
+
+      if (caineDeathSeqState == 1)
+      {
+          float t_val = caineDeathSeqTimer / 1.0f;
+          if (t_val > 1.0f) t_val = 1.0f;
+          float smoothT = t_val * t_val * (3.0f - 2.0f * t_val);
+
+          drawEyeX = deathSeqCamStartEyeX + (destEyeX - deathSeqCamStartEyeX) * smoothT;
+          drawEyeY = deathSeqCamStartEyeY + (destEyeY - deathSeqCamStartEyeY) * smoothT;
+          drawEyeZ = deathSeqCamStartEyeZ + (destEyeZ - deathSeqCamStartEyeZ) * smoothT;
+
+          // Interpolate view direction vector from starting camera direction to zoomDir
+          float startDirX = deathSeqCamStartTargetX - deathSeqCamStartEyeX;
+          float startDirY = deathSeqCamStartTargetY - deathSeqCamStartEyeY;
+          float startDirZ = deathSeqCamStartTargetZ - deathSeqCamStartEyeZ;
+          float startLen = std::sqrt(startDirX*startDirX + startDirY*startDirY + startDirZ*startDirZ);
+          if (startLen > 0.0f)
+          {
+              startDirX /= startLen;
+              startDirY /= startLen;
+              startDirZ /= startLen;
+          }
+          else
+          {
+              startDirX = zoomDirX; startDirY = zoomDirY; startDirZ = zoomDirZ;
+          }
+
+          float curDirX = startDirX + (zoomDirX - startDirX) * smoothT;
+          float curDirY = startDirY + (zoomDirY - startDirY) * smoothT;
+          float curDirZ = startDirZ + (zoomDirZ - startDirZ) * smoothT;
+          float curDirLen = std::sqrt(curDirX*curDirX + curDirY*curDirY + curDirZ*curDirZ);
+          if (curDirLen > 0.0f)
+          {
+              curDirX /= curDirLen;
+              curDirY /= curDirLen;
+              curDirZ /= curDirLen;
+          }
+
+          float lookDist = 100.0f;
+          drawTargetX = drawEyeX + curDirX * lookDist;
+          drawTargetY = drawEyeY + curDirY * lookDist;
+          drawTargetZ = drawEyeZ + curDirZ * lookDist;
+      }
+      else if (caineDeathSeqState == 2 || caineDeathSeqState == 3)
+      {
+          drawEyeX = destEyeX;
+          drawEyeY = destEyeY;
+          drawEyeZ = destEyeZ;
+
+          drawTargetX = caineCenter.x;
+          drawTargetY = caineCenter.y;
+          drawTargetZ = caineCenter.z;
+      }
+      else if (caineDeathSeqState == 4)
+      {
+          float t_val = caineDeathSeqTimer / 1.0f;
+          if (t_val > 1.0f) t_val = 1.0f;
+          float smoothT = t_val * t_val * (3.0f - 2.0f * t_val);
+
+          drawEyeX = deathSeqCamStartEyeX + (eyeX - deathSeqCamStartEyeX) * smoothT;
+          drawEyeY = deathSeqCamStartEyeY + (eyeY - deathSeqCamStartEyeY) * smoothT;
+          drawEyeZ = deathSeqCamStartEyeZ + (eyeZ - deathSeqCamStartEyeZ) * smoothT;
+
+          // Interpolate view direction vector from zoomDir to normal follow look vector
+          float fdx = targetX - eyeX;
+          float fdy = baseTargetY - eyeY;
+          float fdz = targetZ - eyeZ;
+          float flen = std::sqrt(fdx*fdx + fdy*fdy + fdz*fdz);
+          float followDirX = 0.0f, followDirY = 0.0f, followDirZ = 1.0f;
+          if (flen > 0.0f)
+          {
+              followDirX = fdx / flen;
+              followDirY = fdy / flen;
+              followDirZ = fdz / flen;
+          }
+
+          float curDirX = zoomDirX + (followDirX - zoomDirX) * smoothT;
+          float curDirY = zoomDirY + (followDirY - zoomDirY) * smoothT;
+          float curDirZ = zoomDirZ + (followDirZ - zoomDirZ) * smoothT;
+          float curDirLen = std::sqrt(curDirX*curDirX + curDirY*curDirY + curDirZ*curDirZ);
+          if (curDirLen > 0.0f)
+          {
+              curDirX /= curDirLen;
+              curDirY /= curDirLen;
+              curDirZ /= curDirLen;
+          }
+
+          float lookDist = 100.0f;
+          drawTargetX = drawEyeX + curDirX * lookDist;
+          drawTargetY = drawEyeY + curDirY * lookDist;
+          drawTargetZ = drawEyeZ + curDirZ * lookDist;
+      }
+  }
+
+  // Record camera position to global variables
+  currentCameraEyeX = drawEyeX;
+  currentCameraEyeY = drawEyeY;
+  currentCameraEyeZ = drawEyeZ;
+
+  // Calculate and record camera look direction to global variables
+  float dx = drawTargetX - drawEyeX;
+  float dy = drawTargetY - drawEyeY;
+  float dz = drawTargetZ - drawEyeZ;
+  float len = std::sqrt(dx * dx + dy * dy + dz * dz);
+  if (len > 0.0f)
+  {
+      currentCameraDirX = dx / len;
+      currentCameraDirY = dy / len;
+      currentCameraDirZ = dz / len;
+  }
+  else
+  {
+      currentCameraDirX = -std::sin(cameraYaw) * std::cos(cameraPitch);
+      currentCameraDirY = -std::sin(cameraPitch);
+      currentCameraDirZ = -std::cos(cameraYaw) * std::cos(cameraPitch);
+  }
 
   float shakeX = 0.0f;
   float shakeY = 0.0f;
@@ -1201,8 +1489,8 @@ void myDisplayFunc(void)
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
   gluLookAt(
-      eyeX + shakeX,    eyeY + shakeY,        eyeZ + shakeZ,
-      targetX + shakeX, baseTargetY + shakeY, targetZ + shakeZ, 
+      drawEyeX + shakeX,    drawEyeY + shakeY,        drawEyeZ + shakeZ,
+      drawTargetX + shakeX, drawTargetY + shakeY, drawTargetZ + shakeZ, 
       0.0f,    1.0f,        0.0f 
   );
 
@@ -1315,6 +1603,9 @@ void myKeyboardFunc(unsigned char key, int x, int y)
                 myvirtualworld.isGloinksActive = false;
                 currentUIState = GAMEPLAY;
                 break;
+            case '4':
+                isDifficultyEasy = !isDifficultyEasy;
+                break;
             case '0':
                 exit(0);
                 break;
@@ -1355,6 +1646,12 @@ void myKeyboardFunc(unsigned char key, int x, int y)
               break;
       }
       glutPostRedisplay();
+      return;
+  }
+
+  // Intercept keyboard actions during Caine death sequence
+  if (caineDeathSeqState >= 1 && caineDeathSeqState <= 3)
+  {
       return;
   }
 
@@ -1590,14 +1887,14 @@ void myPassiveMotionFunc(int x, int y)
  int centerX = window.width  / 2;
  int centerY = window.height / 2;
 
- if (currentUIState != GAMEPLAY)
- {
-     if (x != centerX || y != centerY)
-     {
-         glutWarpPointer(centerX, centerY);
-     }
-     return;
- }
+  if (currentUIState != GAMEPLAY || (caineDeathSeqState >= 1 && caineDeathSeqState <= 3))
+  {
+      if (x != centerX || y != centerY)
+      {
+          glutWarpPointer(centerX, centerY);
+      }
+      return;
+  }
 
  if (x == centerX && y == centerY)
      return;
@@ -1619,7 +1916,7 @@ void myPassiveMotionFunc(int x, int y)
 
 void myMouseFunc(int button, int state, int x, int y)
 {
-    if (currentUIState != GAMEPLAY)
+    if (currentUIState != GAMEPLAY || (caineDeathSeqState >= 1 && caineDeathSeqState <= 3))
         return;
 
     switch (button)

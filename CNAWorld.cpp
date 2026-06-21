@@ -597,12 +597,20 @@ void MyVirtualWorld::tickTime(float cameraYaw, float cameraPitch, const bool* ke
 extern bool isWinDelayed;
 extern float winDelayTimer;
 extern bool isTestArena;
+extern int caineDeathSeqState;
+extern float caineDeathSeqTimer;
+extern int caineDeathSeqTextLength;
+extern float caineDeathSeqTextTimer;
 
 void MyVirtualWorld::resetGame()
 {
     isWinDelayed = false;
     winDelayTimer = 0.0f;
     isTestArena = false;
+    caineDeathSeqState = 0;
+    caineDeathSeqTimer = 0.0f;
+    caineDeathSeqTextLength = 0;
+    caineDeathSeqTextTimer = 0.0f;
 
     // Reset meteors
     environment.resetMeteors();

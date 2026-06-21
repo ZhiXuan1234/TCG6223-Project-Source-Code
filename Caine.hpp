@@ -215,6 +215,11 @@ public:
     bool wasLayingDown;
     bool testArenaSweepMode;
 
+    bool sweepActive2;
+    int sweepDirection2;
+    int nextSweepDirection2;
+    float sweepCurrentPos2;
+
     // Phase transition variables
     int currentPhase;
     bool isTransitioning;

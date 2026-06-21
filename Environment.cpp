@@ -14,6 +14,7 @@ extern float boundaryScale;
 extern float screenShakeIntensity;
 extern float screenShakeTimer;
 extern bool isTestArena;
+extern int caineDeathSeqState;
 
 static void getTransformedCenter(const ObjModel& model, float tx, float tz, float scale, float rotateAngleDegrees, float& outX, float& outZ);
 
@@ -1504,7 +1505,25 @@ void Environment::resetMeteors()
 
 void Environment::updateMeteors(float deltaTime)
 {
-    if (!isMeteorModeActive || !isTestArena)
+    // During Caine's death sequence, reset all active/falling meteors and bail out
+    if (caineDeathSeqState > 0)
+    {
+        for (int i = 0; i < NUM_METEORS; i++)
+        {
+            meteors[i].state = 0;
+            meteors[i].currentX = meteors[i].originalX;
+            meteors[i].currentY = meteors[i].originalY;
+            meteors[i].currentZ = meteors[i].originalZ;
+            meteors[i].fallProgress = 0.0f;
+        }
+        for (int i = 0; i < MAX_METEOR_PARTICLES; i++)
+        {
+            meteorParticles[i].active = false;
+        }
+        return;
+    }
+
+    if (!isMeteorModeActive)
     {
         for (int i = 0; i < NUM_METEORS; i++)
         {
@@ -1523,7 +1542,7 @@ void Environment::updateMeteors(float deltaTime)
     {
         meteorCooldownTimer = nextMeteorInterval;
         // Cooldown randomized between 10 to 30 seconds
-        nextMeteorInterval = 10.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 20.0f);
+        nextMeteorInterval = 5.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / 20.0f);
         
         int numToLaunch = (rand() % 2 == 0) ? 1 : 2;
         int launchedCount = 0;
@@ -1595,7 +1614,7 @@ void Environment::updateMeteors(float deltaTime)
                 float dx = myvirtualworld.kinger.posX - m.currentX;
                 float dz = myvirtualworld.kinger.posZ - m.currentZ;
                 float dist = std::sqrt(dx * dx + dz * dz);
-                float radius = 30.0f;
+                float radius = 50.0f;
                 
                 if (dist < radius)
                 {
@@ -1613,7 +1632,37 @@ void Environment::updateMeteors(float deltaTime)
                     myvirtualworld.kinger.velocityY = 30.0f;
                     myvirtualworld.kinger.isGrounded = false;
                     
-                    myvirtualworld.kinger.takeDamage(40);
+                    myvirtualworld.kinger.takeDamage(10);
+                }
+
+                // Damage and knockback all Gloinks within blast radius
+                for (int gi = 0; gi < (int)myvirtualworld.gloinks.animation.activeGloinks.size(); gi++)
+                {
+                    auto& gloink = myvirtualworld.gloinks.animation.activeGloinks[gi];
+                    if (gloink.isDead) continue;
+
+                    float gdx = gloink.posX - m.currentX;
+                    float gdz = gloink.posZ - m.currentZ;
+                    float gdist = std::sqrt(gdx * gdx + gdz * gdz);
+
+                    if (gdist < radius)
+                    {
+                        // Knockback direction away from impact point
+                        float gDirX = 0.0f;
+                        float gDirZ = 1.0f;
+                        if (gdist > 0.1f)
+                        {
+                            gDirX = gdx / gdist;
+                            gDirZ = gdz / gdist;
+                        }
+
+                        gloink.isKnockedBack = true;
+                        gloink.knockbackTimer = 0.4f;
+                        gloink.knockbackDirX = gDirX;
+                        gloink.knockbackDirZ = gDirZ;
+
+                        //myvirtualworld.gloinks.hurtGloink(gi);
+                    }
                 }
             }
             else

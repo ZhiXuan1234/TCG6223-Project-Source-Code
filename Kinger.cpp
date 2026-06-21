@@ -8,6 +8,7 @@
 // Global scope reference to the main world instance
 extern ProjectWorld::MyVirtualWorld myvirtualworld;
 extern bool isTestArena;
+extern bool isDifficultyEasy;
 
 using namespace ProjectKinger;
 
@@ -164,6 +165,16 @@ void Kinger::takeDamage(int amount)
  */
 void Kinger::rebirth()
 {
+    if (isDifficultyEasy)
+    {
+        maxHealth = 50;
+        animation.butterflyCharges = 5;
+    }
+    else
+    {
+        maxHealth = 20;
+        animation.butterflyCharges = 3;
+    }
     currentHealth = maxHealth;
     posX = 0.0f;
     posY = -18.7f;
@@ -175,7 +186,7 @@ void Kinger::rebirth()
     knockbackVelZ = 0.0f;
     isGrounded = true;
 
-    // Reset animation death state
+    // Reset animation death state and charges
     animation.isDead = false;
     animation.deathTimer = 0.0f;
 }
