@@ -81,14 +81,44 @@ void AudioManager::stopBackgroundMusic()
 
 void AudioManager::playSoundEffect(const std::string& filePath)
 {
-    BOOL success = PlaySound(
+    char fullPath[MAX_PATH];
+
+    DWORD result = GetFullPathName(
         filePath.c_str(),
-        NULL,
-        SND_FILENAME | SND_ASYNC
+        MAX_PATH,
+        fullPath,
+        NULL
     );
 
-    if (!success)
+    if (result == 0)
     {
-        std::cout << "Failed to play sound effect: " << filePath << std::endl;
+        std::cout << "Failed to convert SFX path: " << filePath << std::endl;
+        return;
+    }
+
+    mciSendString("close sfx", NULL, 0, NULL);
+
+    std::string openCommand = "open \"";
+    openCommand += fullPath;
+    openCommand += "\" type mpegvideo alias sfx";
+
+    MCIERROR openResult = mciSendString(openCommand.c_str(), NULL, 0, NULL);
+    if (openResult != 0)
+    {
+        char errorText[256];
+        mciGetErrorString(openResult, errorText, sizeof(errorText));
+        std::cout << "Failed to open SFX: " << fullPath << " | MCI Error: " << errorText << std::endl;
+        return;
+    }
+
+    // Set SFX volume to a lower value (e.g. 300 out of 1000, which is 30% volume)
+    mciSendString("setaudio sfx volume to 300", NULL, 0, NULL);
+
+    MCIERROR playResult = mciSendString("play sfx from 0", NULL, 0, NULL);
+    if (playResult != 0)
+    {
+        char errorText[256];
+        mciGetErrorString(playResult, errorText, sizeof(errorText));
+        std::cout << "Failed to play SFX: " << fullPath << " | MCI Error: " << errorText << std::endl;
     }
 }

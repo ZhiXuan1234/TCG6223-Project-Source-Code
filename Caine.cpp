@@ -9,6 +9,7 @@ extern bool showHitboxes;
 extern bool isTestArena;
 extern int caineDeathSeqState;
 extern float caineDeathSeqTimer;
+extern int caineIntroSeqState;
 
 using namespace ProjectCaine;
 
@@ -287,6 +288,37 @@ void Caine::update(float deltaTime)
         spawnY = posY;
         spawnZ = posZ;
         spawnPositionSaved = true;
+    }
+
+    if (caineIntroSeqState > 0)
+    {
+        posX = 0.0f;
+        posY = 0.0f;
+        posZ = -120.0f;
+
+        animation.hoverOffset = 0.0f;
+        animation.bodyTiltAngle = 0.0f;
+        animation.jawFlapAngle = 0.0f;
+        animation.staffSwayAngle = 0.0f;
+        animation.mouthOpenFactor = 0.0f;
+        animation.isShootingState = false;
+        animation.shootingTimer = 0.0f;
+        animation.isLayingDown = false;
+        animation.layDownFactor = 0.0f;
+        animation.isLeaningForward = false;
+        animation.leanForwardFactor = 0.0f;
+        animation.isDead = false;
+        animation.deathTimer = 0.0f;
+        animation.isLaughing = false;
+        animation.isHurt = false;
+        animation.hurtTimer = 0.0f;
+        
+        isTeleporting = false;
+        isAppearing = false;
+        visualScaleFactor = 1.0f;
+        sweepActive = false;
+        
+        return;
     }
 
     if (caineDeathSeqState > 0)
@@ -1045,7 +1077,7 @@ void Caine::takeDamage(int amount)
         return;
     }
 
-    if (caineDeathSeqState > 0) return;
+    if (caineDeathSeqState > 0 || caineIntroSeqState > 0) return;
     if (isTransitioning) return; // Invincible during transition state!
     if (animation.isHurt || animation.isDead) return;
 

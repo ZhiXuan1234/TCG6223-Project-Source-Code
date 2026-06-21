@@ -602,6 +602,11 @@ extern float caineDeathSeqTimer;
 extern int caineDeathSeqTextLength;
 extern float caineDeathSeqTextTimer;
 
+extern int caineIntroSeqState;
+extern float caineIntroSeqTimer;
+extern int caineIntroSeqTextLength;
+extern float caineIntroSeqTextTimer;
+
 void MyVirtualWorld::resetGame()
 {
     isWinDelayed = false;
@@ -611,6 +616,11 @@ void MyVirtualWorld::resetGame()
     caineDeathSeqTimer = 0.0f;
     caineDeathSeqTextLength = 0;
     caineDeathSeqTextTimer = 0.0f;
+
+    caineIntroSeqState = 0;
+    caineIntroSeqTimer = 0.0f;
+    caineIntroSeqTextLength = 0;
+    caineIntroSeqTextTimer = 0.0f;
 
     // Reset meteors
     environment.resetMeteors();

@@ -155,6 +155,20 @@ float currentCameraTargetY = 0.0f;
 float currentCameraTargetZ = 0.0f;
 bool hasStartedDeathSeq = false;
 
+// Intro Sequence variables
+int caineIntroSeqState = 0;
+float caineIntroSeqTimer = 0.0f;
+int caineIntroSeqTextLength = 0;
+float caineIntroSeqTextTimer = 0.0f;
+std::string caineIntroSeqDialogue = "Oh Kinger, there you are.";
+float introSeqCamStartEyeX = 0.0f;
+float introSeqCamStartEyeY = 0.0f;
+float introSeqCamStartEyeZ = 0.0f;
+float introSeqCamStartTargetX = 0.0f;
+float introSeqCamStartTargetY = 0.0f;
+float introSeqCamStartTargetZ = 0.0f;
+bool hasStartedIntroSeq = false;
+
 static void drawCenteredString(void* font, const char* str, float y, float left, float right);
 
 void drawCrosshair()
@@ -625,8 +639,8 @@ void drawHUD()
         }
     }
 
-    // RPG Dialogue Box (Caine Death sequence States 2 & 3)
-    if (caineDeathSeqState == 2 || caineDeathSeqState == 3)
+    // RPG Dialogue Box (Caine Death/Intro sequence States 2 & 3)
+    if (caineDeathSeqState == 2 || caineDeathSeqState == 3 || caineIntroSeqState == 2 || caineIntroSeqState == 3)
     {
         float boxW = 600.0f;
         float boxH = 120.0f;
@@ -663,8 +677,10 @@ void drawHUD()
 
         // Draw scrolled dialogue text in white
         glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-        std::string fullText = caineDeathSeqDialogue;
-        std::string subText = (caineDeathSeqState == 3) ? fullText : fullText.substr(0, caineDeathSeqTextLength);
+        std::string fullText = (caineIntroSeqState > 0) ? caineIntroSeqDialogue : caineDeathSeqDialogue;
+        int textLength = (caineIntroSeqState > 0) ? caineIntroSeqTextLength : caineDeathSeqTextLength;
+        bool isFullState = (caineIntroSeqState > 0) ? (caineIntroSeqState == 3) : (caineDeathSeqState == 3);
+        std::string subText = isFullState ? fullText : fullText.substr(0, textLength);
         drawString(GLUT_BITMAP_HELVETICA_18, subText.c_str(), bLeft + 30.0f, bTop - 75.0f);
     }
 
@@ -1102,7 +1118,7 @@ void drawMenuUI()
 
 void updateKeyStatesFromWindows()
 {
-    if (currentUIState != GAMEPLAY || (caineDeathSeqState >= 1 && caineDeathSeqState <= 3))
+    if (currentUIState != GAMEPLAY || (caineDeathSeqState >= 1 && caineDeathSeqState <= 3) || (caineIntroSeqState >= 1 && caineIntroSeqState <= 3))
     {
         keyStates['w'] = keyStates['W'] = false;
         keyStates['a'] = keyStates['A'] = false;
@@ -1248,6 +1264,71 @@ void myDisplayFunc(void)
   else
   {
       hasStartedDeathSeq = false;
+  }
+
+  // Intro Sequence State Machine Update
+  if (currentUIState == GAMEPLAY && caineIntroSeqState > 0)
+  {
+      caineIntroSeqTimer += deltaTime;
+      if (caineIntroSeqState == 1) // Zoom In (2.0s)
+      {
+          if (caineIntroSeqTimer >= 2.0f)
+          {
+              caineIntroSeqState = 2;
+              caineIntroSeqTimer = 0.0f;
+              caineIntroSeqTextLength = 0;
+              caineIntroSeqTextTimer = 0.0f;
+          }
+      }
+      else if (caineIntroSeqState == 2) // Scroll Dialogue
+      {
+          caineIntroSeqTextTimer += deltaTime;
+          int targetLen = static_cast<int>(caineIntroSeqTextTimer / 0.08f);
+          const std::string dialogueText = caineIntroSeqDialogue;
+          if (targetLen > (int)dialogueText.length())
+          {
+              targetLen = (int)dialogueText.length();
+          }
+          caineIntroSeqTextLength = targetLen;
+
+          if (caineIntroSeqTextLength >= (int)dialogueText.length())
+          {
+              caineIntroSeqState = 3;
+              caineIntroSeqTimer = 0.0f;
+          }
+      }
+      else if (caineIntroSeqState == 3) // Hold Dialogue (2.0s)
+      {
+          if (caineIntroSeqTimer >= 2.0f)
+          {
+              caineIntroSeqState = 4;
+              caineIntroSeqTimer = 0.0f;
+              
+              // Capture camera position at the end of holding, so we can zoom out back from here
+              introSeqCamStartEyeX = currentCameraEyeX;
+              introSeqCamStartEyeY = currentCameraEyeY;
+              introSeqCamStartEyeZ = currentCameraEyeZ;
+              introSeqCamStartTargetX = currentCameraTargetX;
+              introSeqCamStartTargetY = currentCameraTargetY;
+              introSeqCamStartTargetZ = currentCameraTargetZ;
+          }
+      }
+      else if (caineIntroSeqState == 4) // Zoom Out (1.5s)
+      {
+          if (caineIntroSeqTimer >= 1.5f)
+          {
+              caineIntroSeqState = 0; // Finish!
+              caineIntroSeqTimer = 0.0f;
+              
+              // Enable Gloinks active updates and spawning for gameplay
+              myvirtualworld.isGloinksActive = true;
+              myvirtualworld.gloinks.initGloinks();
+          }
+      }
+  }
+  else
+  {
+      hasStartedIntroSeq = false;
   }
 
  // Smoothly follow the player's Y position
@@ -1453,6 +1534,130 @@ void myDisplayFunc(void)
       }
   }
 
+  if (caineIntroSeqState >= 1 && caineIntroSeqState <= 4)
+  {
+      ProjectCaine::Caine& boss = myvirtualworld.caine;
+      Vec3 caineCenter = boss.getCaineWorldCenter();
+
+      // Calculate normalized direction from intro start camera position to Caine's center
+      float sdx = caineCenter.x - introSeqCamStartEyeX;
+      float sdy = caineCenter.y - introSeqCamStartEyeY;
+      float sdz = caineCenter.z - introSeqCamStartEyeZ;
+      float slen = std::sqrt(sdx*sdx + sdy*sdy + sdz*sdz);
+      float zoomDirX = 0.0f, zoomDirY = 0.0f, zoomDirZ = 1.0f;
+      if (slen > 0.0f)
+      {
+          zoomDirX = sdx / slen;
+          zoomDirY = sdy / slen;
+          zoomDirZ = sdz / slen;
+      }
+
+      float destEyeX = caineCenter.x - zoomDirX * 45.0f;
+      float destEyeY = caineCenter.y - zoomDirY * 45.0f;
+      float destEyeZ = caineCenter.z - zoomDirZ * 45.0f;
+
+      if (caineIntroSeqState == 1) // Zoom In (over 2.0s)
+      {
+          if (!hasStartedIntroSeq)
+          {
+              hasStartedIntroSeq = true;
+              introSeqCamStartEyeX = eyeX;
+              introSeqCamStartEyeY = eyeY;
+              introSeqCamStartEyeZ = eyeZ;
+              introSeqCamStartTargetX = targetX;
+              introSeqCamStartTargetY = baseTargetY;
+              introSeqCamStartTargetZ = targetZ;
+          }
+
+          float t_val = caineIntroSeqTimer / 2.0f;
+          if (t_val > 1.0f) t_val = 1.0f;
+          float smoothT = t_val * t_val * (3.0f - 2.0f * t_val);
+
+          drawEyeX = introSeqCamStartEyeX + (destEyeX - introSeqCamStartEyeX) * smoothT;
+          drawEyeY = introSeqCamStartEyeY + (destEyeY - introSeqCamStartEyeY) * smoothT;
+          drawEyeZ = introSeqCamStartEyeZ + (destEyeZ - introSeqCamStartEyeZ) * smoothT;
+
+          float startDirX = introSeqCamStartTargetX - introSeqCamStartEyeX;
+          float startDirY = introSeqCamStartTargetY - introSeqCamStartEyeY;
+          float startDirZ = introSeqCamStartTargetZ - introSeqCamStartEyeZ;
+          float startLen = std::sqrt(startDirX*startDirX + startDirY*startDirY + startDirZ*startDirZ);
+          if (startLen > 0.0f)
+          {
+              startDirX /= startLen;
+              startDirY /= startLen;
+              startDirZ /= startLen;
+          }
+          else
+          {
+              startDirX = zoomDirX; startDirY = zoomDirY; startDirZ = zoomDirZ;
+          }
+
+          float curDirX = startDirX + (zoomDirX - startDirX) * smoothT;
+          float curDirY = startDirY + (zoomDirY - startDirY) * smoothT;
+          float curDirZ = startDirZ + (zoomDirZ - startDirZ) * smoothT;
+          float curDirLen = std::sqrt(curDirX*curDirX + curDirY*curDirY + curDirZ*curDirZ);
+          if (curDirLen > 0.0f)
+          {
+              curDirX /= curDirLen;
+              curDirY /= curDirLen;
+              curDirZ /= curDirLen;
+          }
+
+          float lookDist = 100.0f;
+          drawTargetX = drawEyeX + curDirX * lookDist;
+          drawTargetY = drawEyeY + curDirY * lookDist;
+          drawTargetZ = drawEyeZ + curDirZ * lookDist;
+      }
+      else if (caineIntroSeqState == 2 || caineIntroSeqState == 3) // Show Text box
+      {
+          drawEyeX = destEyeX;
+          drawEyeY = destEyeY;
+          drawEyeZ = destEyeZ;
+
+          drawTargetX = caineCenter.x;
+          drawTargetY = caineCenter.y;
+          drawTargetZ = caineCenter.z;
+      }
+      else if (caineIntroSeqState == 4) // Zoom Out (over 1.5s)
+      {
+          float t_val = caineIntroSeqTimer / 1.5f;
+          if (t_val > 1.0f) t_val = 1.0f;
+          float smoothT = t_val * t_val * (3.0f - 2.0f * t_val);
+
+          drawEyeX = introSeqCamStartEyeX + (eyeX - introSeqCamStartEyeX) * smoothT;
+          drawEyeY = introSeqCamStartEyeY + (eyeY - introSeqCamStartEyeY) * smoothT;
+          drawEyeZ = introSeqCamStartEyeZ + (eyeZ - introSeqCamStartEyeZ) * smoothT;
+
+          float fdx = targetX - eyeX;
+          float fdy = baseTargetY - eyeY;
+          float fdz = targetZ - eyeZ;
+          float flen = std::sqrt(fdx*fdx + fdy*fdy + fdz*fdz);
+          float followDirX = 0.0f, followDirY = 0.0f, followDirZ = 1.0f;
+          if (flen > 0.0f)
+          {
+              followDirX = fdx / flen;
+              followDirY = fdy / flen;
+              followDirZ = fdz / flen;
+          }
+
+          float curDirX = zoomDirX + (followDirX - zoomDirX) * smoothT;
+          float curDirY = zoomDirY + (followDirY - zoomDirY) * smoothT;
+          float curDirZ = zoomDirZ + (followDirZ - zoomDirZ) * smoothT;
+          float curDirLen = std::sqrt(curDirX*curDirX + curDirY*curDirY + curDirZ*curDirZ);
+          if (curDirLen > 0.0f)
+          {
+              curDirX /= curDirLen;
+              curDirY /= curDirLen;
+              curDirZ /= curDirLen;
+          }
+
+          float lookDist = 100.0f;
+          drawTargetX = drawEyeX + curDirX * lookDist;
+          drawTargetY = drawEyeY + curDirY * lookDist;
+          drawTargetZ = drawEyeZ + curDirZ * lookDist;
+      }
+  }
+
   // Record camera position to global variables
   currentCameraEyeX = drawEyeX;
   currentCameraEyeY = drawEyeY;
@@ -1534,6 +1739,11 @@ void myKeyboardFunc(unsigned char key, int x, int y)
       {
           myvirtualworld.startGame();
           currentUIState = GAMEPLAY;
+          caineIntroSeqState = 1;
+          caineIntroSeqTimer = 0.0f;
+          caineIntroSeqTextLength = 0;
+          caineIntroSeqTextTimer = 0.0f;
+          hasStartedIntroSeq = false;
       }
       else if (key == '2')
       {
@@ -1589,11 +1799,21 @@ void myKeyboardFunc(unsigned char key, int x, int y)
                 isTestArena = false;
                 myvirtualworld.startGame();
                 currentUIState = GAMEPLAY;
+                caineIntroSeqState = 1;
+                caineIntroSeqTimer = 0.0f;
+                caineIntroSeqTextLength = 0;
+                caineIntroSeqTextTimer = 0.0f;
+                hasStartedIntroSeq = false;
                 break;
             case '2':
                 isTestArena = false;
                 myvirtualworld.debugEnvironment();
                 currentUIState = GAMEPLAY;
+                caineIntroSeqState = 1;
+                caineIntroSeqTimer = 0.0f;
+                caineIntroSeqTextLength = 0;
+                caineIntroSeqTextTimer = 0.0f;
+                hasStartedIntroSeq = false;
                 break;
             case '3':
                 isTestArena = true;
@@ -1630,10 +1850,20 @@ void myKeyboardFunc(unsigned char key, int x, int y)
                else if (myvirtualworld.isDebugMode)
                {
                    myvirtualworld.debugEnvironment();
+                   caineIntroSeqState = 1;
+                   caineIntroSeqTimer = 0.0f;
+                   caineIntroSeqTextLength = 0;
+                   caineIntroSeqTextTimer = 0.0f;
+                   hasStartedIntroSeq = false;
                }
                else
                {
                    myvirtualworld.startGame();
+                   caineIntroSeqState = 1;
+                   caineIntroSeqTimer = 0.0f;
+                   caineIntroSeqTextLength = 0;
+                   caineIntroSeqTextTimer = 0.0f;
+                   hasStartedIntroSeq = false;
                }
                currentUIState = GAMEPLAY;
                break;
@@ -1649,8 +1879,8 @@ void myKeyboardFunc(unsigned char key, int x, int y)
       return;
   }
 
-  // Intercept keyboard actions during Caine death sequence
-  if (caineDeathSeqState >= 1 && caineDeathSeqState <= 3)
+  // Intercept keyboard actions during Caine death/intro sequence
+  if ((caineDeathSeqState >= 1 && caineDeathSeqState <= 3) || (caineIntroSeqState >= 1 && caineIntroSeqState <= 3))
   {
       return;
   }
@@ -1887,7 +2117,7 @@ void myPassiveMotionFunc(int x, int y)
  int centerX = window.width  / 2;
  int centerY = window.height / 2;
 
-  if (currentUIState != GAMEPLAY || (caineDeathSeqState >= 1 && caineDeathSeqState <= 3))
+  if (currentUIState != GAMEPLAY || (caineDeathSeqState >= 1 && caineDeathSeqState <= 3) || (caineIntroSeqState >= 1 && caineIntroSeqState <= 3))
   {
       if (x != centerX || y != centerY)
       {
@@ -1916,7 +2146,7 @@ void myPassiveMotionFunc(int x, int y)
 
 void myMouseFunc(int button, int state, int x, int y)
 {
-    if (currentUIState != GAMEPLAY || (caineDeathSeqState >= 1 && caineDeathSeqState <= 3))
+    if (currentUIState != GAMEPLAY || (caineDeathSeqState >= 1 && caineDeathSeqState <= 3) || (caineIntroSeqState >= 1 && caineIntroSeqState <= 3))
         return;
 
     switch (button)
