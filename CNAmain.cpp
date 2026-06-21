@@ -1164,6 +1164,8 @@ void myDisplayFunc(void)
           winDelayTimer += deltaTime;
           if (winDelayTimer >= 5.0f)
           {
+              myvirtualworld.audioManager.playSoundEffect("Audio\\SFX\\Win.wav");
+
               currentUIState = WIN_SCREEN;
               isWinDelayed = false;
           }
@@ -1241,6 +1243,8 @@ void myDisplayFunc(void)
           {
               caineDeathSeqState = 5;
               caineDeathSeqTimer = 0.0f;
+
+              myvirtualworld.audioManager.playSoundEffect("Audio\\SFX\\Win.wav");
               currentUIState = WIN_SCREEN;
           }
       }
