@@ -517,14 +517,14 @@ void MyVirtualWorld::init()
 void MyVirtualWorld::draw()
 {
     /*Environment*/
-    environment.draw();
+    //environment.draw();
 
     /*Characters*/
-    kinger.draw();
+    //kinger.draw();
     
     gloinks.draw();
     
-    caine.draw();
+    //caine.draw();
     
     //butterfly.draw();
     //kingerRoll.draw();
