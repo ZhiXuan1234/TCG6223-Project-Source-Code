@@ -15,6 +15,7 @@ public:
     void stopBackgroundMusic();
 
     void playSoundEffect(const std::string& filePath);
+    void stopSoundEffect();
 };
 
 #endif

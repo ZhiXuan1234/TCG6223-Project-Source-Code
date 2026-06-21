@@ -1182,6 +1182,8 @@ void myDisplayFunc(void)
           {
               currentUIState = WIN_SCREEN;
               isWinDelayed = false;
+              myvirtualworld.audioManager.stopBackgroundMusic();
+              myvirtualworld.audioManager.playSoundEffect("Audio\\SFX\\Win.wav");
           }
       }
   }
@@ -1258,6 +1260,8 @@ void myDisplayFunc(void)
               caineDeathSeqState = 5;
               caineDeathSeqTimer = 0.0f;
               currentUIState = WIN_SCREEN;
+              myvirtualworld.audioManager.stopBackgroundMusic();
+              myvirtualworld.audioManager.playSoundEffect("Audio\\SFX\\Win.wav");
           }
       }
   }

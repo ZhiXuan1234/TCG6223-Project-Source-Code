@@ -122,3 +122,8 @@ void AudioManager::playSoundEffect(const std::string& filePath)
         std::cout << "Failed to play SFX: " << fullPath << " | MCI Error: " << errorText << std::endl;
     }
 }
+
+void AudioManager::stopSoundEffect()
+{
+    mciSendString("close sfx", NULL, 0, NULL);
+}

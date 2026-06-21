@@ -641,6 +641,9 @@ void MyVirtualWorld::resetGame()
     isGloinksActive = false;
     isDebugMode = false;
 
+    // Stop any playing sound effects (like Win.wav)
+    audioManager.stopSoundEffect();
+
     // Restart background music (does nothing if it is already playing)
     audioManager.playBackgroundMusic("Audio\\BGM\\TheAmazingDigitalCircusBGM.wav");
 }
