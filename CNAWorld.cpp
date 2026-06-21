@@ -515,16 +515,16 @@ void MyVirtualWorld::init()
     setupEnvironmentLighting();
 
     /*Background Music*/
-    //audioManager.playBackgroundMusic("Audio\\BGM\\[Jigoku Shoujo OST] Ake ni Somaru - The Faustian (128k).wav");
+    audioManager.playBackgroundMusic("Audio\\BGM\\[Jigoku Shoujo OST] Ake ni Somaru - The Faustian (128k).wav");
 }
 
 void MyVirtualWorld::draw()
 {
     /*Environment*/
-    //environment.draw();
+    environment.draw();
 
     /*Characters*/
-    //kinger.draw();
+    kinger.draw();
     
     if (isGloinksActive)
     {
