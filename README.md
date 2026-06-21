@@ -1,130 +1,343 @@
-# Caine & Abel
+# TCG6223 Computer Graphics Project
 
-Made by ... ,Jaixen, ...
+## The Amazing Digital Circus: Blind-Box Battle Arena
 
-## Table of Content (Current)
+This repository contains the completed source code for the TCG6223 Computer Graphics group project. The project is a 3D OpenGL battle game inspired by *The Amazing Digital Circus*, where the player controls Kinger and fights against Caine inside an enclosed circus battle arena.
 
-- [Main fucntion]
-- [3D Virtual World projection]
-- [Model Loader]  -Jamie & Assited by Lau Zhi Xuan
-- [Texture Loader] -Jamie
-- [Character Models] - Kinger (Done & Loaded) & Caine (Done but not Loaded) -Jamie
-- [Character Texture] - Kinger (Undone) & Caine (Currently Unavailable) -Jamie
-- [stb_image.h] #dont remove this file
-- Added Environment and Audio. (Animation for environment not done yet)
-- Please refer below on how to check the linker for the audio connectivity.
+The game is developed using C++, OpenGL, GLUT/freeglut, Code::Blocks, MinGW, and WinMM audio functions.
 
-## READ THIS
+---
 
-This is a C++ code project for Computer Graphics, please read and follow instruction below while installing this project.
+## Project Overview
 
-# Message to the developers
-!!DO NOT!!
-1. DO NOT MODIFY any important code without any consent.
-2. DO NOT move the model file. This will cause the Model Loader can't load the model.
-3. DO NOT MODIFY the arraged model position.
+The project implements a 3D blind-box battle game with:
 
-!!DO!!
-1. Read through the code file and the comments to understand each fucntions of the code files.
-2. Understand where to put your code and check for each errors.
-3. Save a backup project for safety purposes if any changes on the code causes a break down on the project.
-4. Ensuring path of file declaration will not be specific (e.g. C://User//...) for easy compile purposes.
+* Third-person player control
+* Kinger as the playable character
+* Caine as the boss character
+* Gloinks as supporting enemy/hazard objects
+* Animated circus battle arena
+* Textured 3D models loaded from text-based model files
+* Lighting, shading, texture mapping, animation, collision, hit detection, and game UI
+* Background music and sound effects
+* Start menu, pause menu, win screen, and death screen
 
-## Installation / Compile Instruction
-1. Download the file
-2. Decompress the file
-3. Open CodeBlock version 17.12
-4. Open the file as project
-5. Select TCG6213-Project.cbp
-6. Run the project file.
+---
 
-# IF you encounter any error, pls give a feedback to the previous contributors
+## Main Features
 
-# Audio Setup Guide for Code::Blocks
+### Character System
 
-This project uses `AudioManager.cpp` and `AudioManager.hpp` to play background music using the Windows `PlaySound()` function.
+* Kinger player model with separated body parts
+* Caine boss model with separated parts and animation
+* Gloinks enemy/hazard models
+* Butterfly and Kinger Roll supporting models
+* Custom model loading using `.txt` model data
+* Texture loading using `stb_image.h`
 
-Because `PlaySound()` belongs to the Windows Multimedia library, each computer must link the project with:
+### Gameplay
+
+* Move Kinger using keyboard controls
+* Aim using mouse movement
+* Shoot using left mouse button
+* Reload weapon
+* Jump
+* Dodge roll
+* Heal using butterfly skill
+* Fight Caine through multiple attack patterns
+* Avoid Gloinks, sweep attacks, meteors, and other hazards
+* Win condition and death condition included
+
+### Environment
+
+* Enclosed circus arena
+* Skybox
+* Checkerboard ground
+* Castle walls
+* Cubes, grouped cubes, irregular cubes, pillars, roof, and floating spheres
+* Texture mapping for circus theme
+* Global and local lighting
+* Time-based animation for moving objects
+* Collision-based obstacles
+* Horizontal glitch sweeping hazard
+
+### Audio
+
+* Background music using WinMM MCI command
+* Sound effects using WinMM `PlaySound()`
+* Shotgun shooting sound
+* Win sound effect
+* Required linker option: `-lwinmm`
+
+---
+
+## Controls
+
+### Main Menu
+
+| Key | Action            |
+| --- | ----------------- |
+| `1` | Start Game        |
+| `2` | Debug Environment |
+| `3` | Test Arena        |
+| `4` | Toggle Difficulty |
+| `0` | Exit Game         |
+
+### Gameplay
+
+| Key / Input        | Action                     |
+| ------------------ | -------------------------- |
+| `W`, `A`, `S`, `D` | Move Kinger                |
+| Mouse Movement     | Rotate camera              |
+| Left Mouse Button  | Shoot                      |
+| `SPACE`            | Jump                       |
+| `R`                | Reload                     |
+| `C`                | Dodge roll                 |
+| `F`                | Heal skill                 |
+| `Z` or `ESC`       | Pause / Resume             |
+| `B`                | Toggle hitbox display      |
+| Arrow Keys         | Camera adjustment          |
+| `F1`               | Toggle shading / wireframe |
+| `F2`               | Toggle axis rendering      |
+| `F3`               | Toggle lighting            |
+
+---
+
+## Project Structure
 
 ```text
+TCG6223-Project-Source-Code/
+│
+├── CNAmain.cpp / CNAmain.hpp
+│   └── Main program, GLUT window, input handling, camera, UI, and game state.
+│
+├── CNAWorld.cpp / CNAWorld.hpp
+│   └── Main world controller for loading models, textures, lighting, audio, and updates.
+│
+├── ObjModel.cpp / ObjModel.hpp
+│   └── Custom text-based model loader and OpenGL drawing logic.
+│
+├── TextureLoader.cpp / TextureLoader.hpp
+│   └── Texture loading using stb_image.
+│
+├── Environment.cpp / Environment.hpp
+│   └── Skybox, ground, walls, props, lighting, animations, collision, meteors, and glitch hazard.
+│
+├── Kinger.cpp / Kinger.hpp
+├── KingerAnimation.cpp / KingerAnimation.hpp
+│   └── Kinger model drawing, movement, shooting, jumping, rolling, reloading, healing, hurt, and death.
+│
+├── Caine.cpp / Caine.hpp
+├── CaineAnimation.cpp / CaineAnimation.hpp
+│   └── Caine boss model, AI, attacks, phase changes, projectiles, sweep hazard, clones, and death sequence.
+│
+├── Gloinks.cpp / Gloinks.hpp
+├── GloinksAnimation.cpp / GloinksAnimation.hpp
+│   └── Gloinks model drawing, spawning, movement, hit detection, and death behaviour.
+│
+├── Butterfly.cpp / Butterfly.hpp
+├── KingerRoll.cpp / KingerRoll.hpp
+│   └── Supporting models for healing and dodge roll.
+│
+├── AudioManager.cpp / AudioManager.hpp
+│   └── Background music and sound effect playback using WinMM.
+│
+├── Model/
+│   └── Text model files and texture images.
+│
+├── Audio/
+│   ├── BGM/
+│   └── SFX/
+│
+├── bin/
+│   └── Debug/
+│       └── Compiled executable and required runtime files.
+│
+├── TCG6223-Project.cbp
+│   └── Code::Blocks project file.
+│
+└── state-of-code.md
+    └── Technical architecture and code status documentation.
+```
+
+---
+
+## How to Compile and Run in Code::Blocks
+
+1. Download or clone this repository.
+2. Open Code::Blocks.
+3. Open the project file:
+
+```text
+TCG6223-Project.cbp
+```
+
+4. Make sure the compiler is MinGW.
+5. Make sure the linker options include:
+
+```text
+-lopengl32
+-lglu32
+-lglut32
 -lwinmm
 ```
 
-## Required Audio Files
-
-Make sure these files/folders exist in the project:
+Depending on the local GLUT setup, the GLUT option may also be:
 
 ```text
-AudioManager.cpp
-AudioManager.hpp
-
-Audio
-└── BGM
-    └── DarkCircusTheme.wav
+-lfreeglut
 ```
 
-The background music should be in `.wav` format.
-
-## How to Add the Linker in Code::Blocks
-
-1. Open the project in Code::Blocks.
-2. Go to:
-
-```text
-Project → Build options
-```
-
-3. Select the main project name on the left side, not only `Debug` or `Release`.
-4. Open the tab:
-
-```text
-Linker settings
-```
-
-5. In the box called:
-
-```text
-Other linker options
-```
-
-add this line:
-
-```text
--lwinmm
-```
-
-6. Click `OK`.
-7. Rebuild the project:
+6. Click:
 
 ```text
 Build → Rebuild
 ```
 
-## Common Error
-
-If you see this error:
+7. Click:
 
 ```text
-undefined reference to PlaySoundA
+Run
 ```
 
-it means the linker option was not added correctly.
+---
 
-Check again that:
+## How to Run by Double-Clicking the EXE
+
+The game can also be run directly by double-clicking the compiled `.exe` file.
+
+Make sure the `.exe`, required DLL files, `Model` folder, and `Audio` folder are placed together.
+
+Example:
+
+```text
+TCG6223_Game/
+│
+├── TCG6223-Project.exe
+├── libfreeglut.dll
+├── glut32.dll
+├── libgcc_s_seh-1.dll
+├── libstdc++-6.dll
+├── libwinpthread-1.dll
+│
+├── Model/
+│   ├── Kinger/
+│   ├── Caine/
+│   ├── Gloinks/
+│   ├── Environment/
+│   └── ...
+│
+└── Audio/
+    ├── BGM/
+    └── SFX/
+```
+
+Important:
+The `Model` and `Audio` folders must be in the same folder level as the `.exe`, because the program uses relative file paths.
+
+---
+
+## Windows SmartScreen Warning
+
+When running the `.exe`, Windows may show this warning:
+
+```text
+Windows protected your PC
+Microsoft Defender SmartScreen prevented an unrecognized app from starting.
+```
+
+This can happen because the executable is newly built and not recognized by Windows yet.
+
+### Option 1: Run Anyway
+
+If you trust the project files:
+
+1. Click `More info`.
+2. Click `Run anyway`.
+
+### Option 2: Unblock the EXE File
+
+If Windows keeps warning you:
+
+1. Right-click the `.exe` file.
+2. Select `Properties`.
+3. Under the `General` tab, look for:
+
+```text
+Security: This file came from another computer and might be blocked to help protect this computer.
+```
+
+4. Check `Unblock`.
+5. Click `Apply`.
+6. Click `OK`.
+7. Run the program again.
+
+---
+
+## Common Runtime Issues
+
+### Missing DLL Files
+
+If the game runs inside Code::Blocks but does not run by double-clicking the `.exe`, copy the required DLL files beside the `.exe`.
+
+Common required DLL files include:
+
+```text
+libfreeglut.dll
+glut32.dll
+libgcc_s_seh-1.dll
+libstdc++-6.dll
+libwinpthread-1.dll
+```
+
+Use DLL files from the same MinGW/freeglut setup used to compile the project.
+
+### Model Files Cannot Load
+
+If the console shows:
+
+```text
+Failed to open model file
+```
+
+then the `Model` folder is not beside the `.exe`.
+
+Fix the folder structure:
+
+```text
+TCG6223-Project.exe
+Model/
+Audio/
+```
+
+### Audio Does Not Play
+
+Make sure the `Audio` folder is beside the `.exe`.
+
+Also make sure the linker contains:
 
 ```text
 -lwinmm
 ```
 
-is inside:
+The project uses:
 
-```text
-Project → Build options → Linker settings → Other linker options
-```
+* MCI command for background music
+* `PlaySound()` for sound effects
 
-## Important Note
+---
 
-If the `.cbp` Code::Blocks project file is already updated and pushed to GitHub, the linker setting should be included automatically when other members pull the latest project.
+## Notes for Developers
 
-However, if the error still appears, manually add `-lwinmm` using the steps above.
+* Do not move the `Model` folder unless the file paths in the code are updated.
+* Do not remove `stb_image.h`.
+* Avoid using absolute paths such as `C:\Users\...` in source code.
+* Keep all file paths relative so the project can run on other computers.
+* Rebuild the project after modifying source files.
+* Keep the `Audio` and `Model` folders with the executable when testing outside Code::Blocks.
 
+---
+
+## Final Status
+
+The project is complete and ready for final demonstration and submission. It includes character models, environment models, texture mapping, lighting, animation, game controls, collision, battle logic, user interface, audio, win/death screens, and executable runtime support.
