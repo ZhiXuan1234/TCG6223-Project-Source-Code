@@ -525,7 +525,7 @@ void MyVirtualWorld::init()
     setupEnvironmentLighting();
 
     /*Background Music*/
-    audioManager.playBackgroundMusic("Audio\\BGM\\[Jigoku Shoujo OST] Ake ni Somaru - The Faustian (128k).wav");
+    audioManager.playBackgroundMusic("Audio\\BGM\\TheAmazingDigitalCircusBGM.wav");
 }
 
 void MyVirtualWorld::draw()
@@ -630,6 +630,9 @@ void MyVirtualWorld::resetGame()
     isCaineActive = false;
     isGloinksActive = false;
     isDebugMode = false;
+
+    // Restart background music (does nothing if it is already playing)
+    audioManager.playBackgroundMusic("Audio\\BGM\\TheAmazingDigitalCircusBGM.wav");
 }
 
 void MyVirtualWorld::startGame()

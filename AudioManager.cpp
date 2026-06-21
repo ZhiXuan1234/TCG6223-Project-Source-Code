@@ -39,7 +39,7 @@ void AudioManager::playBackgroundMusic(const std::string& filePath)
 
     std::string openCommand = "open \"";
     openCommand += fullPath;
-    openCommand += "\" type waveaudio alias bgm";
+    openCommand += "\" type mpegvideo alias bgm";
 
     MCIERROR openResult = mciSendString(openCommand.c_str(), NULL, 0, NULL);
 
@@ -52,6 +52,9 @@ void AudioManager::playBackgroundMusic(const std::string& filePath)
         std::cout << "MCI Error: " << errorText << std::endl;
         return;
     }
+
+    // Lower volume so it softly plays in the background
+    mciSendString("setaudio bgm volume to 150", NULL, 0, NULL);
 
     MCIERROR playResult = mciSendString("play bgm repeat", NULL, 0, NULL);
 

@@ -512,7 +512,11 @@
 
 1781604192 source:c:\users\user\desktop\tcg6223-project-source-code\audiomanager.cpp
 
-1781272005 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\audiomanager.cpp
+1782052868 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\audiomanager.cpp
+	"AudioManager.hpp"
+	<windows.h>
+	<mmsystem.h>
+	<iostream>
 
 1781605297 a54dc0f91303aa74d4b5a7e0ec18bc81f7529
 	"AudioManager.hpp"
@@ -611,7 +615,7 @@
 	<string>
 	"ObjModel.hpp"
 
-1781272005 c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\audiomanager.hpp
+1782050365 c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\audiomanager.hpp
 	<string>
 
 1781847961 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\butterfly.cpp
@@ -667,7 +671,7 @@
 	"CNAmain.hpp"
 	"CNAWorld.hpp"
 
-1782043605 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\cnamain.cpp
+1782050365 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\cnamain.cpp
 	"xx.hpp"
 	<cstdlib>
 	<cstdio>
@@ -745,7 +749,7 @@
 
 1781604192 source:c:\users\user\desktop\tcg6223-project-source-code\environment.cpp
 
-1782037581 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\cnaworld.cpp
+1782052525 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\cnaworld.cpp
 	<GL/glut.h>
 	<iostream>
 	"CNAWorld.hpp"
@@ -755,7 +759,7 @@
 	<GL/glut.h>
 	<string>
 
-1782042944 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\environment.cpp
+1782044928 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\environment.cpp
 	<windows.h>
 	<GL/gl.h>
 	<GL/glut.h>
@@ -788,7 +792,7 @@
 	"Kinger.hpp"
 	"CNAWorld.hpp"
 
-1782039849 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\kinger.cpp
+1782050365 source:c:\users\surface laptop 4\onedrive\desktop\tcg6223-project\tcg6223-project-source-code\kinger.cpp
 	<GL/glut.h>
 	<iostream>
 	<cmath>

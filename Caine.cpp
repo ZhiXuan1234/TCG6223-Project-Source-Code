@@ -1107,6 +1107,7 @@ void Caine::takeDamage(int amount)
             {
                 caineDeathSeqState = 1;
                 caineDeathSeqTimer = 0.0f;
+                myvirtualworld.audioManager.stopBackgroundMusic();
 
                 // Reset Caine states
                 animation.isLayingDown = false;
