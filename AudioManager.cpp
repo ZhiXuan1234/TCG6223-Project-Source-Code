@@ -16,7 +16,7 @@ void AudioManager::playBackgroundMusic(const std::string& filePath)
     // Close old BGM alias first, just in case
     mciSendString("close bgm", NULL, 0, NULL);
 
-    std::string openCommand = "open \"" + filePath + "\" type waveaudio alias bgm";
+    std::string openCommand = "open \"" + filePath + "\" alias bgm";
     MCIERROR openResult = mciSendString(openCommand.c_str(), NULL, 0, NULL);
 
     if (openResult != 0)

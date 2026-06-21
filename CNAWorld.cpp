@@ -525,7 +525,7 @@ void MyVirtualWorld::init()
     setupEnvironmentLighting();
 
     /*Background Music*/
-    audioManager.playBackgroundMusic("Audio\\BGM\\TheAmazingDigitalCircusMainTheme.wav");
+    audioManager.playBackgroundMusic("Audio\\BGM\\TheAmazingDigitalCircusBGM.wav");
 }
 
 void MyVirtualWorld::draw()
