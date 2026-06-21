@@ -1,185 +1,421 @@
 # State of Code — TCG6223 Fixed-Function OpenGL Game Project
-**Technical Onboarding Guide & Architecture Documentation**
+
+## Technical Onboarding Guide & Architecture Documentation
+
+This document summarizes the final state of the TCG6223 Computer Graphics project source code. The project is a completed 3D third-person OpenGL battle game set inside a circus-themed arena inspired by *The Amazing Digital Circus*.
 
 ---
 
 ## 1. High-Level Project Overview
 
-This project is a 3D third-person action game set in a circus-arena environment, heavily inspired by the characters of **The Amazing Digital Circus (TADC)**. It is built in C++ using the fixed-function OpenGL and GLUT libraries.
+The project is a 3D battle game developed using:
 
-### Core Gameplay Loop
-The player controls **Kinger** as a third-person character who can move, jump, shoot, dodge roll, reload, and heal using butterfly summons. Kinger faces the boss **Caine** (the Ringmaster), who stands in the center of the arena, and waves of **Gloinks** (hazard enemies).
+* C++
+* OpenGL fixed-function pipeline
+* GLUT/freeglut
+* Code::Blocks
+* MinGW
+* WinMM audio functions
 
-### Rendering & Update Pipeline
-The game runs on a single-threaded message loop managed by GLUT.
-1. **GLUT Events**: Keyboard, mouse clicks, mouse passive movement, and window resize events update input states (`keyStates` array, `cameraYaw`/`cameraPitch` tracking).
-2. **Display Loop (`myDisplayFunc`)**:
-   - Recomputes the over-the-shoulder third-person camera orientation via `gluLookAt` using follow distance, height, and right-shoulder offsets.
-   - Sets up light source positions.
-   - Iterates through the virtual world instance to render the environment, characters, bullets, and summon particles.
-   - Switches to 2D orthographic projection to overlay the aim crosshair.
-3. **Frame Tick (`tickTime`)**:
-   - Computes the elapsed time (`deltaTime`) since the last frame.
-   - Updates the physics and animation states for Kinger, Caine, and all active Gloinks.
+The player controls Kinger in a third-person view and fights against Caine inside an enclosed circus battle arena. The game includes player movement, shooting, rolling, healing, enemy hazards, boss attacks, UI states, audio, collision, and win/lose conditions.
 
 ---
 
-## 2. Directory & File Structure
+## 2. Main Gameplay Loop
 
-The codebase is organized into modules. Each character/entity separates its raw rendering (drawing calls) from its logical variables and state calculations.
+The main gameplay loop is handled through GLUT callbacks in `CNAmain.cpp`.
 
-```
-[Root]
-├── CNAmain.cpp / .hpp          # Entry point, GLUT callbacks, input polling, follow camera, 2D UI
-├── CNAWorld.cpp / .hpp         # Main World controller: owns all models, handles initialization & ticks
-├── ObjModel.cpp / .hpp         # Custom OBJ mesh parser (.txt format) & low-level OpenGL draw calls
-├── TextureLoader.cpp / .hpp    # STB Image wrapper to load PNG/JPG images into OpenGL textures
-├── Environment.cpp / .hpp      # Skybox, floor, walls, pillars, and glitch digital background effects
-├── AudioManager.cpp / .hpp     # Sound loading and playing placeholders (WinMM API wrapper)
-├── Kinger.cpp / .hpp           # Kinger visual mesh draw calls, texturing, and physical coordinates
-├── KingerAnimation.cpp / .hpp  # Kinger logical updates: idle sway, shooting recoil, reload, roll, heal
-├── KingerRoll.cpp / .hpp       # Auxiliary roll-ball mesh model wrapper used during the dodge roll
-├── Caine.cpp / .hpp            # Caine visual drawing calls for 14 distinct hierarchical body parts
-├── CaineAnimation.cpp / .hpp   # Caine state machine: idle, shoot, lay down, lean forward, death/respawn
-├── Gloinks.cpp / .hpp          # Gloinks drawing calls for 6 variant shapes (star, moon, Pin, etc.)
-├── GloinksAnimation.cpp / .hpp # Spawning, bounce/roll update math, damage flashing, and death falls
-└── Butterfly.cpp / .hpp        # Visual particle butterfly mesh drawings (left/right wings, body)
-```
+### Main Flow
 
-### Separation of Concerns: Visuals vs. Logic
-- **`Name.hpp` / `Name.cpp` (Visuals)**:
-  Contains texture bindings, model instances, and drawing functions. Coordinates transformations via matrix stacks based on the current state.
-  *Example*: `Caine.cpp` uses `glPushMatrix()` and rotations to arrange and draw Caine's hat, jaws, eyes, and hands.
-- **`NameAnimation.hpp` / `NameAnimation.cpp` (Logic)**:
-  Tracks logical state variables, timers, interpolation factors, and health pools. Uses delta time (`deltaTime`) to advance timelines.
-  *Example*: `CaineAnimation.cpp` updates `idleTimer` to calculate breathing sways, handles transition speeds for posture shifts, and ticks the death sequence.
+1. `main()` starts GLUT.
+2. `myInit()` creates the OpenGL window and initializes rendering settings.
+3. `myvirtualworld.init()` loads models, textures, lighting, and audio.
+4. `myDisplayFunc()` runs repeatedly to:
+
+   * Clear the frame.
+   * Update camera position.
+   * Check game state.
+   * Draw the world.
+   * Draw HUD and UI.
+   * Update input states.
+   * Call `tickTime()` for gameplay updates.
+5. `glutMainLoop()` keeps the program running.
 
 ---
 
-## 3. Core Systems & Design Patterns
+## 3. Main Source Files
 
-### DeltaTime Update Loop
-To ensure gameplay runs at a consistent speed regardless of frame rate, all movement and animation updates are scaled by `deltaTime` (the fraction of a second since the last frame):
-
-```cpp
-float currentLeanPitch;
-float targetLeanPitch;
-const float LEAN_SPEED = 3.0f;
-
-// Smooth interpolation independent of frame rate
-currentLeanPitch += (targetLeanPitch - currentLeanPitch) * LEAN_SPEED * deltaTime;
+```text
+CNAmain.cpp / CNAmain.hpp
 ```
 
-### Posture & Ability State Machines
-Animations and abilities are governed by discrete states. Mutual exclusion is enforced via guard clauses inside the skill casting functions.
-- **Kinger States**: Idle, Casting Skill (Shooting), Rolling, Reloading, Healing, Hurt (Damage Flash), and Dead.
-- **Caine States**: Idle, Shooting State, Laying Down (Key `8`), Leaning Forward (Key `9`), and Dead (Key `0`).
-- **Gloinks States**: Bouncing (Alive), Hurt, and Dead (Minecraft-style fall).
+Handles the main program, GLUT callbacks, window creation, input, camera, HUD, menus, pause screen, death screen, win screen, and state transitions.
 
-### The "Matrix Sandwich" (Pivot Point Rotation)
-To rotate a model part around a specific offset pivot (like Caine's jaw or head) rather than the global origin `(0,0,0)`, the code uses a standard translation sandwich:
-1. Push matrix: `glPushMatrix()`
-2. Translate to pivot point offset: `glTranslatef(pivotX, pivotY, pivotZ)`
-3. Apply rotations: `glRotatef(...)`
-4. Translate back by the negative offset: `glTranslatef(-pivotX, -pivotY, -pivotZ)`
-5. Draw the local geometry
-6. Pop matrix: `glPopMatrix()`
-
-#### Code Snippet: Caine's Jaw Opening
-```cpp
-// 1. Move to jaw attachment joint, combining hover and body offsets
-glTranslatef(0.0f, animation.hoverOffset + caineBodyY, 0.0f);
-
-// 2. Translate to jaw pivot joint center (Matrix Sandwich translation)
-glTranslatef(0.0f, -6.0f, -2.0f);
-
-// 3. Apply rotation along pitch axis (X axis) to open the mouth
-glRotatef(-caineJawAngle, 1.0f, 0.0f, 0.0f);
-
-// 4. Translate back (Matrix Sandwich inverse translation)
-glTranslatef(0.0f, 6.0f, 2.0f);
-
-// 5. Draw the lower jaw model
-drawLowerJaw();
+```text
+CNAWorld.cpp / CNAWorld.hpp
 ```
 
-#### Code Snippet: Caine's Head Tilting (Death Animation)
-During Caine's death animation, his head tilts to the left at a pivot located in the center of the head `(0.0f, 3.0f, -20.0f)`:
+Owns the main game objects, including Kinger, Caine, Gloinks, Butterfly, Kinger Roll, Environment, and AudioManager. It handles model loading, texture loading, lighting setup, world drawing, and update calls.
+
+```text
+ObjModel.cpp / ObjModel.hpp
+```
+
+Loads custom text-based model files and renders the models using OpenGL.
+
+```text
+TextureLoader.cpp / TextureLoader.hpp
+stb_image.h
+```
+
+Loads PNG/JPG texture images into OpenGL texture IDs.
+
+```text
+Environment.cpp / Environment.hpp
+```
+
+Handles the skybox, ground, castle wall, cubes, grouped cubes, irregular cube props, pillars, roof, floating spheres, meteor hazard, collision, lighting zones, environment animation, and horizontal glitch sweeping visual effect.
+
+```text
+Kinger.cpp / Kinger.hpp
+KingerAnimation.cpp / KingerAnimation.hpp
+```
+
+Handles Kinger model rendering, texture binding, player movement, jump, shooting, reload, dodge roll, heal, bullet update, hit detection, damage, and death animation.
+
+```text
+Caine.cpp / Caine.hpp
+CaineAnimation.cpp / CaineAnimation.hpp
+```
+
+Handles Caine model rendering, boss animation, phase transition, projectiles, teleport/clone effects, sweep attack, attack patterns, health, hurt effect, and death sequence.
+
+```text
+Gloinks.cpp / Gloinks.hpp
+GloinksAnimation.cpp / GloinksAnimation.hpp
+```
+
+Handles Gloinks model drawing, spawning, movement, collision/hit response, damage state, and death behaviour.
+
+```text
+Butterfly.cpp / Butterfly.hpp
+KingerRoll.cpp / KingerRoll.hpp
+```
+
+Handles supporting models used for healing and dodge roll effects.
+
+```text
+AudioManager.cpp / AudioManager.hpp
+```
+
+Handles background music and sound effects using WinMM.
+
+---
+
+## 4. Game State System
+
+The game uses the following UI states:
+
 ```cpp
-// 1. Position relative to body base
-glTranslatef(0.0f, animation.hoverOffset + caineBodyY, 0.0f);
-
-// 2. Translate to neck/head pivot point
-glTranslatef(0.0f, 3.0f, -20.0f);
-
-// 3. Rotate head (left tilt on roll axis) during death sequence
-if (animation.isDead)
+enum GameUIState
 {
-    glRotatef(45.0f, 0.0f, 0.0f, 1.0f); // Tilt 45 degrees left
-}
+    START_MENU,
+    GAMEPLAY,
+    PAUSE_MENU,
+    DEATH_SCREEN,
+    WIN_SCREEN
+};
+```
 
-// 4. Translate back
-glTranslatef(0.0f, -3.0f, 20.0f);
+### START_MENU
 
-// 5. Draw Head components
-drawHeadParts();
+Displays the title menu and allows users to start the game, enter debug environment, enter test arena, toggle difficulty, or exit.
+
+### GAMEPLAY
+
+Runs the main battle. Kinger can move, shoot, jump, roll, reload, and heal. Caine and Gloinks update during this state.
+
+### PAUSE_MENU
+
+Allows the player to restart, return to the main menu, or resume.
+
+### DEATH_SCREEN
+
+Shown when Kinger dies.
+
+### WIN_SCREEN
+
+Shown after Caine is defeated and the win sequence completes. A win sound effect plays when this state is triggered.
+
+---
+
+## 5. Player System — Kinger
+
+Kinger is the playable character. The player controls Kinger using keyboard and mouse input.
+
+### Kinger Features
+
+* Third-person movement
+* Camera-relative movement
+* Jumping
+* Shooting
+* Reloading
+* Dodge roll
+* Healing with butterfly skill
+* Hurt reaction
+* Death animation
+* Health and ammo display
+* Bullet and hit detection
+* Shotgun sound effect when firing
+
+### Main Controls
+
+```text
+W / A / S / D       Move
+Mouse movement     Rotate camera
+Left mouse button  Shoot
+SPACE              Jump
+R                  Reload
+C                  Dodge roll
+F                  Heal
+Z / ESC            Pause
 ```
 
 ---
 
-## 4. Key Variables & Global States
+## 6. Boss System — Caine
 
-Incoming developers must respect the following bounds and values during integration:
+Caine is the main boss character.
 
-### Hotkeys and Controls
-- **Mouse Click / LMB Hold**: Fire gun skill.
-- **`W`/`A`/`S`/`D`**: Move Kinger relative to camera horizontal direction.
-- **`SPACE`**: Jump.
-- **`R`**: Reload ammo capacity.
-- **`C`**: Execute dodge roll (gain speed, invulnerability, and turn into checker ball).
-- **`F`**: Summon butterfly to heal +30 HP (locks movement for 2.0 seconds).
-- **`8`**: Toggle Caine body Laying Down state.
-- **`9`**: Toggle Caine body Leaning Forward (45 degrees) state.
-- **`0`**: Trigger Caine Death state (snaps to default position, tilts head left, opens mouth, and disappears).
+### Caine Features
 
-### Arena Environment Constants
-- **Ground Level**: `posY = -18.7f` (Kinger's base height).
-- **Arena Boundaries**: Cylindrical boundary centered around the origin `(0, 0)` with radius of `400.0` units. Keep characters clamped within this circle.
-- **Caine Default Spawn Point**: `(0.0f, 0.0f, -120.0f)`.
+* Idle hover animation
+* Jaw movement
+* Shooting attack
+* Phase-based behaviour
+* Sweep attack
+* Projectile attacks
+* Teleport/clone effects
+* Meteor-related attack mode
+* Hurt reaction
+* Death sequence
+* Win trigger after defeat
 
-### Follow Camera Properties
-- **Follow Distance**: 60.0 units behind Kinger.
-- **Right-Shoulder Offset**: 18.0 units right.
-- **Vertical Base Height**: 30.0 units above Kinger's chest height.
+Caine is updated using time-based logic and state variables, allowing different attacks and animations to activate depending on the game state and phase.
 
 ---
 
-## 5. Current Status & Next Steps
+## 7. Gloinks System
 
-### 100% Complete & Stable
-*   **Aesthetics**: Beautifully lit circus arena, floating geometric elements, digital background glitch effects, and particle indicators.
-*   **Kinger Controls**: Normalised horizontal movement, gravity/jump physics, dodge roll model swap, auto-fire shoot with Z-recoil and parallax tracers, reload cycle, and butterfly heal path.
-*   **Gloink Animations**: Jumping squashes, Z-axis roll-spins, and Minecraft-style death falls.
-*   **Caine Animations**: Breathing hover, jaw flapping, laying down, leaning forward, and death tilting/jaw-opening sequences.
+Gloinks act as supporting enemy/hazard objects.
 
-### TODO Roadmap (For Incoming Teammates)
-The following tasks are pending to turn this animation model viewer into a complete game:
+### Gloinks Features
 
-- [ ] **Spawning Waves Manager**:
-  Create an automated spawn cycle in `GloinksAnimation` or a new spawner manager. It should spawn Gloinks at random points within the arena boundaries on a timer, up to a maximum concurrent count.
-- [ ] **Collision Detection**:
-  - **Bullet vs. Gloinks**: Add bounding box or radius checks in `KingerAnimation::updateSkillState` against all active Gloinks. Trigger `GloinksAnimation::hurtGloink(index)` on contact.
-  - **Bullet vs. Caine**: Check collision against Caine's central position. Trigger damage on Caine.
-  - **Gloinks vs. Kinger**: Add proximity damage. If an active Gloink hits Kinger, reduce Kinger's health pool (`Kinger::takeDamage`).
-- [ ] **Player HUD & Boss Health UI**:
-  Render graphical indicators or health bars. Switch to 2D orthographic projection in `CNAmain.cpp` and draw:
-  - Kinger's current health pool (HP bar) and remaining ammunition capacity.
-  - Caine's boss health bar at the top of the screen when he is active.
-- [ ] **Game State Manager**:
-  Implement state flows:
-  - **Start Menu**: Interactive title screen.
-  - **Active Battle**: Spawns Gloinks and enables Caine's AI attack patterns.
-  - **Win Screen**: Triggered when Caine's health drops to 0.
-  - **Lose Screen**: Triggered when Kinger's health drops to 0.
-- [ ] **Audio Integration**:
-  Uncomment or complete the `AudioManager` sound triggers (using WinMM API) to play background music and shoot/reload sound effects.
+* Multiple geometric body shapes
+* Animated movement
+* Spawning logic
+* Hit response
+* Damage state
+* Death/falling behaviour
+* Interaction with Kinger during gameplay
+
+---
+
+## 8. Environment System
+
+The battle environment is an enclosed circus arena.
+
+### Environment Components
+
+* Skybox
+* Checkerboard ground
+* Castle walls
+* Cubes
+* Grouped cubes
+* Irregular cube props
+* Pillars
+* Roof structure
+* Floating spheres
+* Meteor hazard
+* Horizontal glitch sweeping hazard
+* Collision-based obstacles
+
+### Environment Rendering
+
+The environment uses OpenGL transformations such as:
+
+* `glTranslatef()`
+* `glScalef()`
+* `glRotatef()`
+* `glPushMatrix()`
+* `glPopMatrix()`
+
+These transformations position, scale, and animate each object in the world.
+
+### Environment Animation
+
+Time-based animation is used so that movement remains consistent across different frame rates. Animated elements include:
+
+* Moving cubes
+* Floating spheres
+* Rotating roof
+* Meteor effects
+* Horizontal glitch sweeping hazard
+
+### Collision
+
+Collision logic prevents Kinger from walking through selected environment objects and helps define the playable area.
+
+---
+
+## 9. Camera and Input System
+
+The game uses a third-person over-the-shoulder camera.
+
+### Camera Features
+
+* Camera follows Kinger
+* Mouse controls yaw and pitch
+* Camera uses `gluLookAt()`
+* Camera is clamped within the arena boundary
+* Camera height follows Kinger smoothly
+* Screen shake is applied during selected effects
+
+Keyboard states are stored using the `keyStates` array. Mouse movement is handled through GLUT passive motion callbacks.
+
+---
+
+## 10. UI and HUD
+
+The game includes several UI elements.
+
+### HUD
+
+* Kinger health bar
+* Ammo display
+* Heal charge display
+* Caine boss health bar
+* Crosshair
+* Control tips
+* Sweep attack warning indicator
+* Test arena control guide
+
+### Menus and Screens
+
+* Start menu
+* Pause menu
+* Death screen
+* Win screen
+
+The UI is drawn using 2D orthographic projection after the 3D scene is rendered.
+
+---
+
+## 11. Audio System
+
+Audio is handled by `AudioManager`.
+
+### Background Music
+
+Background music uses WinMM MCI command through `mciSendString()`.
+
+The working setup uses an MCI alias for BGM playback.
+
+### Sound Effects
+
+Sound effects use `PlaySound()` with asynchronous playback.
+
+Current sound effects include:
+
+* Shotgun shooting sound
+* Win sound effect
+
+### Linker Requirement
+
+The project must link with:
+
+```text
+-lwinmm
+```
+
+This is required because both `mciSendString()` and `PlaySound()` are part of the Windows Multimedia library.
+
+---
+
+## 12. Build and Runtime Requirements
+
+### Required Environment
+
+* Windows 10 or later
+* Code::Blocks
+* MinGW compiler
+* OpenGL
+* GLU
+* GLUT/freeglut
+* WinMM linker support
+
+### Required Runtime Files
+
+The executable must be placed together with:
+
+```text
+Model/
+Audio/
+libfreeglut.dll
+glut32.dll
+libgcc_s_seh-1.dll
+libstdc++-6.dll
+libwinpthread-1.dll
+```
+
+The exact DLLs may depend on the local MinGW/freeglut setup.
+
+---
+
+## 13. Current Completion Status
+
+### Completed
+
+* Kinger player model and animation
+* Caine boss model and animation
+* Gloinks model and animation
+* Butterfly and Kinger Roll supporting models
+* Environment model loading
+* Texture mapping
+* Global and local lighting
+* Time-based animation
+* Player controls
+* Camera system
+* Shooting, reload, jump, roll, and heal
+* Caine boss battle logic
+* Gloinks interaction
+* Environment collision
+* Horizontal glitch sweeping hazard
+* Meteor hazard
+* UI and HUD
+* Start menu
+* Pause menu
+* Death screen
+* Win screen
+* Background music
+* Shotgun sound effect
+* Win sound effect
+* Direct executable runtime support
+
+### Final Status
+
+The project is complete and ready for demonstration and submission.
+
+---
+
+## 14. Important Notes for Future Developers
+
+* Keep `Model` and `Audio` beside the `.exe`.
+* Do not remove `stb_image.h`.
+* Do not use absolute file paths.
+* Keep file paths relative for portability.
+* Always rebuild after changing source files.
+* Keep `-lwinmm` in linker settings for audio.
+* Avoid placing audio triggers inside drawing functions because drawing functions run every frame.
+* Trigger one-time sounds during state changes, such as when switching to `WIN_SCREEN`.
+* Use the same MinGW/freeglut DLL files that match the build environment.
