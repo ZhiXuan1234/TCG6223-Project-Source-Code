@@ -9,11 +9,31 @@
 namespace ProjectCaine
 {
 
+struct CaineProjectile
+{
+    bool active;
+    float posX, posY, posZ;
+    float dirX, dirY, dirZ;
+    float lifeTimer;
+};
+
+struct TeleportParticle
+{
+    bool active;
+    float posX, posY, posZ;
+    float velX, velY, velZ;
+    float size;
+    float r, g, b;
+    float alpha;
+    float lifeTime;
+    float maxLife;
+};
+
 /**
  * Caine
  * Represents the Caine boss character, managing its models, textures, position, and drawing routines.
- * 
- * Handles loading of individual OBJ model parts, binding associated texture IDs, scaling, 
+ *
+ * Handles loading of individual OBJ model parts, binding associated texture IDs, scaling,
  * updating animation timelines, and executing hierarchical rendering of limbs, body, and head.
  */
 class Caine
@@ -77,16 +97,41 @@ public:
 
     /**
      * Triggers the death sequence for Caine.
-     * 
+     *
      * Resets active animation postures, snaps Caine to his initial spawn position, and sets the death timer.
      */
     void triggerDeath();
+
+    /**
+     * Triggers the hurt sequence for Caine, initiating the red flash effect.
+     */
+    void triggerHurt();
+
+    // AI state variables
+    float aiFlightTimer;         // time elapsed in current flight path
+    float aiFlightDuration;      // duration to fly in current direction before picking new target
+    float aiTargetX;             // flight target X
+    float aiTargetZ;             // flight target Z
+    float aiTeleportTimer;       // timer tracking time until next teleport
+    float aiTeleportInterval;    // random interval between teleports
+    bool isTeleporting;          // shrinking phase
+    bool isAppearing;            // growing phase
+    float teleportTransitionTimer; // timer for scale shrinking/growing
+    float visualScaleFactor;     // dynamic scale factor multiplied during teleport
+    float facingYaw;             // horizontal angle facing the player
+
+    void resetAI();
 
     /**
      * Sets the uniform scale of the character model.
      * scale The scaling factor to apply uniformly.
      */
     void setScale(float scale);
+
+    int currentHealth;
+    int maxHealth;
+    void takeDamage(int amount);
+    Vec3 getCaineWorldCenter() const;
 
     // Texture Bindings
     GLuint hatTextureID;
@@ -138,11 +183,34 @@ public:
 
     /**
      * Renders the entire character model hierarchically.
-     * 
+     *
      * Applies positioning translation, idle hovering offset, laying down transition,
      * leaning forward transition, death head tilting, and delegates drawing to the body/limb sub-functions.
-     */
+     **/
     void draw() const;
+
+
+    // Projectile systems
+    static const int MAX_CAINE_PROJECTILES = 10;
+    CaineProjectile projectiles[MAX_CAINE_PROJECTILES];
+    float shootCooldownTimer;
+    float shootInterval;
+    void spawnProjectile();
+
+    // Teleportation particle systems
+    static const int MAX_TELEPORT_PARTICLES = 40;
+    TeleportParticle teleportParticles[MAX_TELEPORT_PARTICLES];
+    void spawnTeleportPoof(float x, float y, float z);
+
+    // Sweep attack variables
+    bool sweepActive;
+    int sweepDirection;     // 0=N->S, 1=S->N, 2=W->E, 3=E->W  (active sweep)
+    int nextSweepDirection; // Pre-rolled direction for the upcoming sweep (used by warning UI)
+    float sweepCurrentPos;
+    float sweepSpeed;
+    float sweepTimer;
+    float sweepInterval;
+    bool wasLayingDown;
 };
 
 } // namespace ProjectCaine

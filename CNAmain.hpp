@@ -57,6 +57,8 @@ static GLfloat mycyan[]    = { 0.0f, 1.0f, 1.0f, 1.0f };
 static GLfloat mymagenta[] = { 1.0f, 0.0f, 1.0f, 1.0f };
 static GLfloat myyellow[]  = { 1.0f, 1.0f, 0.0f, 1.0f };
 
+extern float boundaryScale;
+
 static GLfloat mygray10Percent[] = { 0.1f, 0.1f, 0.1f, 1.0f };
 static GLfloat mygray20Percent[] = { 0.2f, 0.2f, 0.2f, 1.0f };
 static GLfloat mygray30Percent[] = { 0.3f, 0.3f, 0.3f, 1.0f };

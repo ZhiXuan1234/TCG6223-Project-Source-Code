@@ -39,6 +39,7 @@ public:
     bool loadFromObjText(const std::string& filePath);
     void draw() const;
     Vec3 getCenter() const;
+    void getBounds(Vec3& minB, Vec3& maxB) const;
 };
 
 #endif

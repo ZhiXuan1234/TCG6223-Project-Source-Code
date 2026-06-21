@@ -29,6 +29,9 @@ CaineAnimation::CaineAnimation()
     leanForwardFactor = 0.0f;
     isDead = false;
     deathTimer = 0.0f;
+    isLaughing = false;
+    isHurt = false;
+    hurtTimer = 0.0f;
 }
 
 /**
@@ -47,8 +50,16 @@ void CaineAnimation::updateIdleState(float dt)
     // Subtle breathing roll tilt (using half frequency to prevent locking with bobbing)
     bodyTiltAngle = std::sin(idleTimer * HOVER_SPEED * 0.5f) * TILT_AMPLITUDE;
     
-    // Continuous smooth sine wave for TMJ mouth open factor (ranges [0.0, 1.0])
-    mouthOpenFactor = (std::sin(idleTimer * JAW_SPEED) * 0.5f) + 0.5f;
+    if (isLaughing)
+    {
+        // Laughing mouth flap: very fast and wide (4x standard speed)
+        mouthOpenFactor = (std::sin(idleTimer * JAW_SPEED * 4.0f) * 0.5f) + 0.5f;
+    }
+    else
+    {
+        // Continuous smooth sine wave for TMJ mouth open factor (ranges [0.0, 1.0])
+        mouthOpenFactor = (std::sin(idleTimer * JAW_SPEED) * 0.5f) + 0.5f;
+    }
     
     // Calculate final rotation angle from factor
     jawFlapAngle = mouthOpenFactor * JAW_MAX_OPEN;
@@ -189,4 +200,33 @@ void CaineAnimation::updateLeanForward(float deltaTime)
         if (leanForwardFactor < 0.0f)
             leanForwardFactor = 0.0f;
     }
+}
+
+/**
+ * Updates the damage stun flashing timer.
+ * deltaTime The elapsed frame time in seconds.
+ */
+void CaineAnimation::updateHurtState(float deltaTime)
+{
+    if (!isHurt) return;
+
+    hurtTimer += deltaTime;
+    if (hurtTimer >= 0.5f)
+    {
+        isHurt = false;
+        hurtTimer = 0.0f;
+    }
+}
+
+/**
+ * Activates the hurt state, interrupting active animations.
+ */
+void CaineAnimation::triggerHurt()
+{
+    isHurt = true;
+    hurtTimer = 0.0f;
+
+    // Immediately stop ongoing shooting
+    isShootingState = false;
+    shootingTimer = 0.0f;
 }

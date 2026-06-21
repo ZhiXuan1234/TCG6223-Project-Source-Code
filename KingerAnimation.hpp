@@ -52,6 +52,7 @@ public:
     float bulletDirZ;       // Trajectory direction unit vector Z component
     
     float bulletDistance;   // Total distance traveled by the active bullet
+    float bulletLifeTimer;   // Timer tracking how long the bullet has been active
 
     // Roll State Variables
     bool  isRolling;        // Flag indicating if the roll ability is active
@@ -86,6 +87,8 @@ public:
     bool isDead;            // Flag indicating if the character is dead
     float deathTimer;       // Timer tracking progress of the death falling sequence
 
+    bool shouldSpawnMuzzleFlash; // Trigger flag for muzzle flash particle spawning
+
     /**
      * Constructor that resets all states, timers, and factors to their defaults.
      */
@@ -105,7 +108,7 @@ public:
     /**
      * Triggers the rolling movement ability, resetting the phase and squash states.
      */
-    void castRollSkill();
+    void castRollSkill(bool isGrounded);
 
     /**
      * Triggers the gun reload animation timeline.

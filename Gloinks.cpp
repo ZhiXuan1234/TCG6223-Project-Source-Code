@@ -2,6 +2,12 @@
 #include <iostream>
 #include <cmath>
 #include "Gloinks.hpp"
+#include "CNAWorld.hpp"
+
+extern ProjectWorld::MyVirtualWorld myvirtualworld;
+
+// Touched for ObjModel/Environment header dependency rebuild
+extern bool showHitboxes;
 
 using namespace ProjectGloinks;
 
@@ -83,7 +89,7 @@ void Gloinks::drawGloinksBowlingPin(float jumpTimer, float posX, float posY, flo
     glBindTexture(GL_TEXTURE_2D, BowlingPinTextureID);
 
     Vec3 center = gloinksBowlingPinModel.getCenter();
-    float scale = 4.0f * uniformScale;
+    float scale = 3.0f * uniformScale;
     float worldCenterY = posY + (center.y * scale);
 
     glPushMatrix();
@@ -92,6 +98,13 @@ void Gloinks::drawGloinksBowlingPin(float jumpTimer, float posX, float posY, flo
     
     // Translate bottom of model to the ground-level Y coordinate
     glTranslatef(posX, worldCenterY, posZ);
+    
+    // Rotate sideways towards the player
+    float dxPin = ::myvirtualworld.kinger.posX - posX;
+    float dzPin = ::myvirtualworld.kinger.posZ - posZ;
+    float angleToPlayerDegPin = std::atan2(dxPin, dzPin) * 57.2957795f;
+    glRotatef(angleToPlayerDegPin + 90.0f, 0.0f, 1.0f, 0.0f);
+    
     glScalef(scale, scale, scale);
 
     // Apply animation transforms, materials, and rotations
@@ -122,7 +135,7 @@ void Gloinks::drawGloinksCirle(float jumpTimer, float posX, float posY, float po
     glBindTexture(GL_TEXTURE_2D, CircleTextureID);
 
     Vec3 center = gloinksCircleModel.getCenter();
-    float scale = 4.0f * uniformScale;
+    float scale = 3.0f * uniformScale;
     float worldCenterY = posY + (center.y * scale);
 
     glPushMatrix();
@@ -130,6 +143,13 @@ void Gloinks::drawGloinksCirle(float jumpTimer, float posX, float posY, float po
     glEnable(GL_NORMALIZE);
     
     glTranslatef(posX, worldCenterY, posZ);
+    
+    // Rotate sideways towards the player
+    float dxCircle = ::myvirtualworld.kinger.posX - posX;
+    float dzCircle = ::myvirtualworld.kinger.posZ - posZ;
+    float angleToPlayerDegCircle = std::atan2(dxCircle, dzCircle) * 57.2957795f;
+    glRotatef(angleToPlayerDegCircle + 90.0f, 0.0f, 1.0f, 0.0f);
+    
     glScalef(scale, scale, scale);
 
     animation.applyAnimationTransforms(center, isDead, deathTimer, isHurt, hurtTimer);
@@ -158,7 +178,7 @@ void Gloinks::drawGloinksCube(float jumpTimer, float posX, float posY, float pos
     glBindTexture(GL_TEXTURE_2D, CubeTextureID);
 
     Vec3 center = gloinksCubeModel.getCenter();
-    float scale = 4.0f * uniformScale;
+    float scale = 3.0f * uniformScale;
     float worldCenterY = posY + (center.y * scale);
 
     glPushMatrix();
@@ -166,6 +186,13 @@ void Gloinks::drawGloinksCube(float jumpTimer, float posX, float posY, float pos
     glEnable(GL_NORMALIZE);
     
     glTranslatef(posX, worldCenterY, posZ);
+    
+    // Rotate sideways towards the player
+    float dxCube = ::myvirtualworld.kinger.posX - posX;
+    float dzCube = ::myvirtualworld.kinger.posZ - posZ;
+    float angleToPlayerDegCube = std::atan2(dxCube, dzCube) * 57.2957795f;
+    glRotatef(angleToPlayerDegCube + 90.0f, 0.0f, 1.0f, 0.0f);
+    
     glScalef(scale, scale, scale);
 
     animation.applyAnimationTransforms(center, isDead, deathTimer, isHurt, hurtTimer);
@@ -194,7 +221,7 @@ void Gloinks::drawGloinksMoon(float jumpTimer, float posX, float posY, float pos
     glBindTexture(GL_TEXTURE_2D, MoonTextureID);
 
     Vec3 center = gloinksMoonModel.getCenter();
-    float scale = 4.0f * uniformScale;
+    float scale = 3.0f * uniformScale;
     float worldCenterY = posY + (center.y * scale);
 
     glPushMatrix();
@@ -202,6 +229,13 @@ void Gloinks::drawGloinksMoon(float jumpTimer, float posX, float posY, float pos
     glEnable(GL_NORMALIZE);
     
     glTranslatef(posX, worldCenterY, posZ);
+    
+    // Rotate sideways towards the player
+    float dxMoon = ::myvirtualworld.kinger.posX - posX;
+    float dzMoon = ::myvirtualworld.kinger.posZ - posZ;
+    float angleToPlayerDegMoon = std::atan2(dxMoon, dzMoon) * 57.2957795f;
+    glRotatef(angleToPlayerDegMoon + 90.0f, 0.0f, 1.0f, 0.0f);
+    
     glScalef(scale, scale, scale);
 
     animation.applyAnimationTransforms(center, isDead, deathTimer, isHurt, hurtTimer);
@@ -230,7 +264,7 @@ void Gloinks::drawGloinksStar(float jumpTimer, float posX, float posY, float pos
     glBindTexture(GL_TEXTURE_2D, StarTextureID);
 
     Vec3 center = gloinksStarModel.getCenter();
-    float scale = 4.0f * uniformScale;
+    float scale = 3.0f * uniformScale;
     float worldCenterY = posY + (center.y * scale);
 
     glPushMatrix();
@@ -238,6 +272,13 @@ void Gloinks::drawGloinksStar(float jumpTimer, float posX, float posY, float pos
     glEnable(GL_NORMALIZE);
     
     glTranslatef(posX, worldCenterY, posZ);
+    
+    // Rotate sideways towards the player
+    float dxStar = ::myvirtualworld.kinger.posX - posX;
+    float dzStar = ::myvirtualworld.kinger.posZ - posZ;
+    float angleToPlayerDegStar = std::atan2(dxStar, dzStar) * 57.2957795f;
+    glRotatef(angleToPlayerDegStar + 90.0f, 0.0f, 1.0f, 0.0f);
+    
     glScalef(scale, scale, scale);
 
     animation.applyAnimationTransforms(center, isDead, deathTimer, isHurt, hurtTimer);
@@ -266,7 +307,7 @@ void Gloinks::drawGloinksTriangular(float jumpTimer, float posX, float posY, flo
     glBindTexture(GL_TEXTURE_2D, TriangularTextureID);
 
     Vec3 center = gloinksTriangularModel.getCenter();
-    float scale = 4.0f * uniformScale;
+    float scale = 3.0f * uniformScale;
     float worldCenterY = posY + (center.y * scale);
 
     glPushMatrix();
@@ -274,6 +315,13 @@ void Gloinks::drawGloinksTriangular(float jumpTimer, float posX, float posY, flo
     glEnable(GL_NORMALIZE);
     
     glTranslatef(posX, worldCenterY, posZ);
+    
+    // Rotate sideways towards the player
+    float dxTri = ::myvirtualworld.kinger.posX - posX;
+    float dzTri = ::myvirtualworld.kinger.posZ - posZ;
+    float angleToPlayerDegTri = std::atan2(dxTri, dzTri) * 57.2957795f;
+    glRotatef(angleToPlayerDegTri + 90.0f, 0.0f, 1.0f, 0.0f);
+    
     glScalef(scale, scale, scale);
 
     animation.applyAnimationTransforms(center, isDead, deathTimer, isHurt, hurtTimer);
@@ -289,6 +337,42 @@ void Gloinks::drawGloinksTriangular(float jumpTimer, float posX, float posY, flo
     glPopMatrix();
 
     glDisable(GL_TEXTURE_2D);
+}
+
+static void drawWireCube(float size)
+{
+    float h = size / 2.0f;
+    
+    // Draw top face
+    glBegin(GL_LINE_LOOP);
+        glVertex3f(-h,  h, -h);
+        glVertex3f( h,  h, -h);
+        glVertex3f( h,  h,  h);
+        glVertex3f(-h,  h,  h);
+    glEnd();
+
+    // Draw bottom face
+    glBegin(GL_LINE_LOOP);
+        glVertex3f(-h, -h, -h);
+        glVertex3f( h, -h, -h);
+        glVertex3f( h, -h,  h);
+        glVertex3f(-h, -h,  h);
+    glEnd();
+
+    // Draw connecting vertical edges
+    glBegin(GL_LINES);
+        glVertex3f(-h,  h, -h);
+        glVertex3f(-h, -h, -h);
+
+        glVertex3f( h,  h, -h);
+        glVertex3f( h, -h, -h);
+
+        glVertex3f( h,  h,  h);
+        glVertex3f( h, -h,  h);
+
+        glVertex3f(-h,  h,  h);
+        glVertex3f(-h, -h,  h);
+    glEnd();
 }
 
 /**
@@ -312,6 +396,32 @@ void Gloinks::draw() const
             case 4: drawGloinksStar(gloink.jumpTimer, gloink.posX, gloink.posY, gloink.posZ, gloink.isHurt, gloink.hurtTimer, gloink.isDead, gloink.deathTimer); break;
             case 5: drawGloinksTriangular(gloink.jumpTimer, gloink.posX, gloink.posY, gloink.posZ, gloink.isHurt, gloink.hurtTimer, gloink.isDead, gloink.deathTimer); break;
         }
+    }
+
+    // Draw hitboxes if toggled visible
+    if (showHitboxes)
+    {
+        glPushAttrib(GL_LIGHTING_BIT | GL_ENABLE_BIT | GL_CURRENT_BIT);
+        glDisable(GL_LIGHTING);
+        glDisable(GL_TEXTURE_2D);
+        glLineWidth(2.0f);
+
+        for (size_t i = 0; i < animation.activeGloinks.size(); ++i)
+        {
+            const auto& gloink = animation.activeGloinks[i];
+            if (gloink.isDead) continue;
+
+            Vec3 gloinkCenter = getGloinkWorldCenter(i);
+            float boxSize = 9.0f * uniformScale;
+
+            glPushMatrix();
+            glTranslatef(gloinkCenter.x, gloinkCenter.y, gloinkCenter.z);
+            glColor3f(0.0f, 1.0f, 0.0f); // Bright green hitbox outline
+            drawWireCube(boxSize);
+            glPopMatrix();
+        }
+
+        glPopAttrib();
     }
 
     glPopMatrix();
@@ -341,4 +451,30 @@ void Gloinks::updateGloinks(float deltaTime)
 void Gloinks::hurtGloink(int index)
 {
     animation.hurtGloink(index);
+}
+
+Vec3 Gloinks::getGloinkWorldCenter(int index) const
+{
+    Vec3 result = { 0.0f, 0.0f, 0.0f };
+    if (index < 0 || index >= (int)animation.activeGloinks.size())
+        return result;
+
+    const auto& gloink = animation.activeGloinks[index];
+    result.x = gloink.posX;
+    result.z = gloink.posZ;
+
+    float centerY = 0.0f;
+    switch (gloink.shapeType)
+    {
+        case 0: centerY = gloinksBowlingPinModel.getCenter().y; break;
+        case 1: centerY = gloinksCircleModel.getCenter().y; break;
+        case 2: centerY = gloinksCubeModel.getCenter().y; break;
+        case 3: centerY = gloinksMoonModel.getCenter().y; break;
+        case 4: centerY = gloinksStarModel.getCenter().y; break;
+        case 5: centerY = gloinksTriangularModel.getCenter().y; break;
+    }
+
+    float scale = 3.0f * uniformScale;
+    result.y = gloink.posY + (centerY * scale);
+    return result;
 }

@@ -94,6 +94,13 @@ public:
      * index The index of the Gloink to damage.
      */
     void hurtGloink(int index);
+
+    /**
+     * Calculates the world space center of the Gloink at the specified index.
+     * index The index of the Gloink.
+     * returns The 3D world space coordinate of the Gloink's center.
+     */
+    Vec3 getGloinkWorldCenter(int index) const;
 };
 
 } // namespace ProjectGloinks

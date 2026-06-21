@@ -169,3 +169,24 @@ Vec3 ObjModel::getCenter() const
     center.z = (minZ + maxZ) / 2.0f;
     return center;
 }
+
+void ObjModel::getBounds(Vec3& minB, Vec3& maxB) const
+{
+    if (vertices.empty())
+    {
+        minB = {0.0f, 0.0f, 0.0f};
+        maxB = {0.0f, 0.0f, 0.0f};
+        return;
+    }
+    minB = vertices[0];
+    maxB = vertices[0];
+    for (const auto& v : vertices)
+    {
+        if (v.x < minB.x) minB.x = v.x;
+        if (v.x > maxB.x) maxB.x = v.x;
+        if (v.y < minB.y) minB.y = v.y;
+        if (v.y > maxB.y) maxB.y = v.y;
+        if (v.z < minB.z) minB.z = v.z;
+        if (v.z > maxB.z) maxB.z = v.z;
+    }
+}
